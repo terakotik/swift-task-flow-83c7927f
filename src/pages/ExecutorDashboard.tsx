@@ -125,6 +125,13 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
+    if (!demoMode) return;
+    setTasks(DEMO_TASKS);
+    setBalance(130);
+    setDisplayName('Демо-исполнитель');
+  }, [demoMode]);
+
+  useEffect(() => {
     if (demoMode || !user) return;
     loadTasks();
     loadProfile();
