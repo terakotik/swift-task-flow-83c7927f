@@ -64,12 +64,53 @@ function TimerBadge({ expiresAt }: { expiresAt: string }) {
   );
 }
 
+const DEMO_TASKS: Task[] = [
+  {
+    id: 'demo-1',
+    task_id: 'YE-100245',
+    name: 'Якитория · Москва, Тверская',
+    addr1: 'Москва, ул. Тверская, 12',
+    addr2: 'Москва, ул. Арбат, 24',
+    link: 'https://eda.yandex.ru',
+    status: 'available',
+    created_at: new Date(Date.now() - 30000).toISOString(),
+    expires_at: new Date(Date.now() + 15 * 60000).toISOString(),
+    created_by: null,
+  },
+  {
+    id: 'demo-2',
+    task_id: 'YE-100312',
+    name: 'Суши Wok · Санкт-Петербург',
+    addr1: 'СПб, Невский пр., 45',
+    addr2: 'СПб, ул. Рубинштейна, 7',
+    link: 'https://eda.yandex.ru',
+    status: 'available',
+    created_at: new Date(Date.now() - 120000).toISOString(),
+    expires_at: null,
+    created_by: null,
+  },
+  {
+    id: 'demo-3',
+    task_id: 'YE-100478',
+    name: 'Тануки · Москва, Юг',
+    addr1: 'Москва, Каширское ш., 26',
+    addr2: 'Москва, ул. Профсоюзная, 50',
+    link: 'https://eda.yandex.ru',
+    status: 'available',
+    created_at: new Date(Date.now() - 600000).toISOString(),
+    expires_at: new Date(Date.now() + 8 * 60000).toISOString(),
+    created_by: null,
+  },
+];
+
 interface Props {
   demoMode?: boolean;
   onExitDemo?: () => void;
+  demoFooter?: React.ReactNode;
+  hideExitDemo?: boolean;
 }
 
-export default function ExecutorDashboard({ demoMode = false, onExitDemo }: Props) {
+export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFooter, hideExitDemo = false }: Props) {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
