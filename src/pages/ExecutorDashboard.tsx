@@ -288,36 +288,33 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                   <Settings size={24} />
                 </button>
               )}
-              {demoMode ? (
-                <button onClick={onExitDemo} className="p-2 bg-destructive/10 text-destructive rounded-full">
-                  <LogOut size={24} />
-                </button>
-              ) : (
-                <button onClick={signOut} className="p-2 bg-destructive/10 text-destructive rounded-full">
-                  <LogOut size={24} />
-                </button>
+              {!hideExitDemo && (
+                demoMode ? (
+                  onExitDemo && (
+                    <button onClick={onExitDemo} className="p-2 bg-destructive/10 text-destructive rounded-full">
+                      <LogOut size={24} />
+                    </button>
+                  )
+                ) : (
+                  <button onClick={signOut} className="p-2 bg-destructive/10 text-destructive rounded-full">
+                    <LogOut size={24} />
+                  </button>
+                )
               )}
             </div>
           </div>
 
           {/* Balance Card */}
-          {!demoMode && (
-            <div className="bg-accent/10 rounded-2xl p-4 flex items-center justify-between mb-3">
-              <div>
-                <p className="text-[10px] font-black text-accent uppercase tracking-widest">Ваш баланс</p>
-                <p className="text-3xl font-black text-accent">{balance}₽</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Активных заданий</p>
-                <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
-              </div>
+          <div className="bg-accent/10 rounded-2xl p-4 flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[10px] font-black text-accent uppercase tracking-widest">Ваш баланс</p>
+              <p className="text-3xl font-black text-accent">{balance}₽</p>
             </div>
-          )}
-          {demoMode && (
-            <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mb-3">
-              Активных: {availableTasks.length}
-            </p>
-          )}
+            <div className="text-right">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Активных заданий</p>
+              <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
+            </div>
+          </div>
         </div>
         {!demoMode && (
           <div className="flex gap-2 px-5 pb-4">
