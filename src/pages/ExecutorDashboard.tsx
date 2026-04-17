@@ -400,6 +400,12 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
         )}
       </main>
 
+      {demoFooter && (
+        <div className="p-4 pb-8 mt-auto">
+          {demoFooter}
+        </div>
+      )}
+
       {/* Settings Modal */}
       {showSettings && user && (
         <div className="fixed inset-0 z-50">
