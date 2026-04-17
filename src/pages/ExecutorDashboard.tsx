@@ -64,12 +64,53 @@ function TimerBadge({ expiresAt }: { expiresAt: string }) {
   );
 }
 
+const DEMO_TASKS: Task[] = [
+  {
+    id: 'demo-1',
+    task_id: 'YE-100245',
+    name: 'Якитория · Москва, Тверская',
+    addr1: 'Москва, ул. Тверская, 12',
+    addr2: 'Москва, ул. Арбат, 24',
+    link: 'https://eda.yandex.ru',
+    status: 'available',
+    created_at: new Date(Date.now() - 30000).toISOString(),
+    expires_at: new Date(Date.now() + 15 * 60000).toISOString(),
+    created_by: null,
+  },
+  {
+    id: 'demo-2',
+    task_id: 'YE-100312',
+    name: 'Суши Wok · Санкт-Петербург',
+    addr1: 'СПб, Невский пр., 45',
+    addr2: 'СПб, ул. Рубинштейна, 7',
+    link: 'https://eda.yandex.ru',
+    status: 'available',
+    created_at: new Date(Date.now() - 120000).toISOString(),
+    expires_at: null,
+    created_by: null,
+  },
+  {
+    id: 'demo-3',
+    task_id: 'YE-100478',
+    name: 'Тануки · Москва, Юг',
+    addr1: 'Москва, Каширское ш., 26',
+    addr2: 'Москва, ул. Профсоюзная, 50',
+    link: 'https://eda.yandex.ru',
+    status: 'available',
+    created_at: new Date(Date.now() - 600000).toISOString(),
+    expires_at: new Date(Date.now() + 8 * 60000).toISOString(),
+    created_by: null,
+  },
+];
+
 interface Props {
   demoMode?: boolean;
   onExitDemo?: () => void;
+  demoFooter?: React.ReactNode;
+  hideExitDemo?: boolean;
 }
 
-export default function ExecutorDashboard({ demoMode = false, onExitDemo }: Props) {
+export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFooter, hideExitDemo = false }: Props) {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -82,6 +123,13 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo }: Prop
   const [myCompleted, setMyCompleted] = useState<CompletedTaskWithDetails[]>([]);
   const [activeTab, setActiveTab] = useState<'available' | 'history'>('available');
   const [showSettings, setShowSettings] = useState(false);
+
+  useEffect(() => {
+    if (!demoMode) return;
+    setTasks(DEMO_TASKS);
+    setBalance(130);
+    setDisplayName('Демо-исполнитель');
+  }, [demoMode]);
 
   useEffect(() => {
     if (demoMode || !user) return;
@@ -240,36 +288,33 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo }: Prop
                   <Settings size={24} />
                 </button>
               )}
-              {demoMode ? (
-                <button onClick={onExitDemo} className="p-2 bg-destructive/10 text-destructive rounded-full">
-                  <LogOut size={24} />
-                </button>
-              ) : (
-                <button onClick={signOut} className="p-2 bg-destructive/10 text-destructive rounded-full">
-                  <LogOut size={24} />
-                </button>
+              {!hideExitDemo && (
+                demoMode ? (
+                  onExitDemo && (
+                    <button onClick={onExitDemo} className="p-2 bg-destructive/10 text-destructive rounded-full">
+                      <LogOut size={24} />
+                    </button>
+                  )
+                ) : (
+                  <button onClick={signOut} className="p-2 bg-destructive/10 text-destructive rounded-full">
+                    <LogOut size={24} />
+                  </button>
+                )
               )}
             </div>
           </div>
 
           {/* Balance Card */}
-          {!demoMode && (
-            <div className="bg-accent/10 rounded-2xl p-4 flex items-center justify-between mb-3">
-              <div>
-                <p className="text-[10px] font-black text-accent uppercase tracking-widest">Ваш баланс</p>
-                <p className="text-3xl font-black text-accent">{balance}₽</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Активных заданий</p>
-                <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
-              </div>
+          <div className="bg-accent/10 rounded-2xl p-4 flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[10px] font-black text-accent uppercase tracking-widest">Ваш баланс</p>
+              <p className="text-3xl font-black text-accent">{balance}₽</p>
             </div>
-          )}
-          {demoMode && (
-            <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mb-3">
-              Активных: {availableTasks.length}
-            </p>
-          )}
+            <div className="text-right">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Активных заданий</p>
+              <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
+            </div>
+          </div>
         </div>
         {!demoMode && (
           <div className="flex gap-2 px-5 pb-4">
@@ -354,6 +399,12 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo }: Prop
           </>
         )}
       </main>
+
+      {demoFooter && (
+        <div className="p-4 pb-8 mt-auto">
+          {demoFooter}
+        </div>
+      )}
 
       {/* Settings Modal */}
       {showSettings && user && (
