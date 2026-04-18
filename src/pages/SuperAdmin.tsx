@@ -39,6 +39,8 @@ export default function SuperAdmin() {
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [adjustAmounts, setAdjustAmounts] = useState<Record<string, string>>({});
+  const [adjustingId, setAdjustingId] = useState<string | null>(null);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
