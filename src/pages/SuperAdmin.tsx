@@ -105,7 +105,35 @@ export default function SuperAdmin() {
     toast({ title: 'Все задания удалены' });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const adjustBalance = async (profile: UserProfile, delta: number) => {
+    if (!isAdmin && !currentUserIsAdmin) {
+      toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
+      return;
+    }
+    const newBalance = Number(profile.balance) + delta;
+    if (newBalance < 0) {
+      toast({ title: 'Ошибка', description: 'Баланс не может быть отрицательным', variant: 'destructive' });
+      return;
+    }
+    setAdjustingId(profile.user_id);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ balance: newBalance })
+      .eq('user_id', profile.user_id);
+    setAdjustingId(null);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: newBalance } : p));
+    setAdjustAmounts(prev => ({ ...prev, [profile.user_id]: '' }));
+    toast({
+      title: delta > 0 ? `+${delta}₽ начислено` : `${delta}₽ списано`,
+      description: `${profile.display_name || profile.email || 'Пользователь'} • новый баланс ${newBalance}₽`,
+    });
+  };
+
+
     e.preventDefault();
     setSubmitting(true);
     try {
