@@ -231,7 +231,7 @@ export default function SuperAdmin() {
         {profiles.map(p => {
           const role = getUserRole(p.user_id);
           return (
-            <div key={p.user_id} className="bg-card p-4 rounded-2xl border border-border shadow-sm">
+            <div key={p.user_id} className="bg-card p-4 rounded-2xl border border-border shadow-sm space-y-3">
               <div className="flex justify-between items-start">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -248,6 +248,35 @@ export default function SuperAdmin() {
                 <div className="text-right ml-2">
                   <p className="text-lg font-black text-accent">{p.balance}₽</p>
                 </div>
+              </div>
+
+              <div className="flex gap-2 items-center pt-2 border-t border-border">
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Сумма ₽"
+                  value={adjustAmounts[p.user_id] ?? ''}
+                  onChange={e => setAdjustAmounts(prev => ({ ...prev, [p.user_id]: e.target.value }))}
+                  className="h-9 text-sm flex-1"
+                  disabled={adjustingId === p.user_id}
+                />
+                <Button
+                  size="sm"
+                  className="h-9 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 px-3"
+                  disabled={adjustingId === p.user_id || !Number(adjustAmounts[p.user_id])}
+                  onClick={() => adjustBalance(p, Math.abs(Number(adjustAmounts[p.user_id]) || 0))}
+                >
+                  <Plus size={16} />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-9 rounded-xl px-3"
+                  disabled={adjustingId === p.user_id || !Number(adjustAmounts[p.user_id])}
+                  onClick={() => adjustBalance(p, -Math.abs(Number(adjustAmounts[p.user_id]) || 0))}
+                >
+                  <Minus size={16} />
+                </Button>
               </div>
             </div>
           );
