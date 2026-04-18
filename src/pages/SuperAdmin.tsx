@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogOut, Trash2, Users, Wallet, RefreshCw } from 'lucide-react';
+import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
 
@@ -39,6 +39,8 @@ export default function SuperAdmin() {
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [adjustAmounts, setAdjustAmounts] = useState<Record<string, string>>({});
+  const [adjustingId, setAdjustingId] = useState<string | null>(null);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
@@ -103,6 +105,33 @@ export default function SuperAdmin() {
     toast({ title: 'Все задания удалены' });
   };
 
+  const adjustBalance = async (profile: UserProfile, delta: number) => {
+    if (!isAdmin && !currentUserIsAdmin) {
+      toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
+      return;
+    }
+    const newBalance = Number(profile.balance) + delta;
+    if (newBalance < 0) {
+      toast({ title: 'Ошибка', description: 'Баланс не может быть отрицательным', variant: 'destructive' });
+      return;
+    }
+    setAdjustingId(profile.user_id);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ balance: newBalance })
+      .eq('user_id', profile.user_id);
+    setAdjustingId(null);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: newBalance } : p));
+    setAdjustAmounts(prev => ({ ...prev, [profile.user_id]: '' }));
+    toast({
+      title: delta > 0 ? `+${delta}₽ начислено` : `${delta}₽ списано`,
+      description: `${profile.display_name || profile.email || 'Пользователь'} • новый баланс ${newBalance}₽`,
+    });
+  };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -202,7 +231,7 @@ export default function SuperAdmin() {
         {profiles.map(p => {
           const role = getUserRole(p.user_id);
           return (
-            <div key={p.user_id} className="bg-card p-4 rounded-2xl border border-border shadow-sm">
+            <div key={p.user_id} className="bg-card p-4 rounded-2xl border border-border shadow-sm space-y-3">
               <div className="flex justify-between items-start">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -219,6 +248,35 @@ export default function SuperAdmin() {
                 <div className="text-right ml-2">
                   <p className="text-lg font-black text-accent">{p.balance}₽</p>
                 </div>
+              </div>
+
+              <div className="flex gap-2 items-center pt-2 border-t border-border">
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Сумма ₽"
+                  value={adjustAmounts[p.user_id] ?? ''}
+                  onChange={e => setAdjustAmounts(prev => ({ ...prev, [p.user_id]: e.target.value }))}
+                  className="h-9 text-sm flex-1"
+                  disabled={adjustingId === p.user_id}
+                />
+                <Button
+                  size="sm"
+                  className="h-9 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 px-3"
+                  disabled={adjustingId === p.user_id || !Number(adjustAmounts[p.user_id])}
+                  onClick={() => adjustBalance(p, Math.abs(Number(adjustAmounts[p.user_id]) || 0))}
+                >
+                  <Plus size={16} />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-9 rounded-xl px-3"
+                  disabled={adjustingId === p.user_id || !Number(adjustAmounts[p.user_id])}
+                  onClick={() => adjustBalance(p, -Math.abs(Number(adjustAmounts[p.user_id]) || 0))}
+                >
+                  <Minus size={16} />
+                </Button>
               </div>
             </div>
           );
