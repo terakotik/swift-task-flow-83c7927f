@@ -138,6 +138,39 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
     loadCompletedTasks();
   }, [user, demoMode]);
 
+  // Realtime: notify user when admin updates their balance
+  useEffect(() => {
+    if (demoMode || !user) return;
+    const channel = supabase
+      .channel(`profile-balance-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const oldBalance = Number((payload.old as any)?.balance ?? 0);
+          const newBalance = Number((payload.new as any)?.balance ?? 0);
+          const delta = newBalance - oldBalance;
+          setBalance(newBalance);
+          if (delta > 0) {
+            toast({
+              title: `💰 +${delta}₽ зачислено!`,
+              description: `Новый баланс: ${newBalance}₽`,
+            });
+          } else if (delta < 0) {
+            toast({
+              title: `${delta}₽ списано`,
+              description: `Новый баланс: ${newBalance}₽`,
+              variant: 'destructive',
+            });
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, demoMode, toast]);
+
   const loadTasks = async () => {
     const now = new Date().toISOString();
     const { data } = await supabase
