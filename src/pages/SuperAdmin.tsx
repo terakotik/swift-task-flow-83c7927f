@@ -132,8 +132,7 @@ export default function SuperAdmin() {
       description: `${profile.display_name || profile.email || 'Пользователь'} • новый баланс ${newBalance}₽`,
     });
   };
-
-
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
