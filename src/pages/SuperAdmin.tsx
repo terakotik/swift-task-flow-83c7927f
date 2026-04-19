@@ -316,6 +316,9 @@ export default function SuperAdmin() {
                 </div>
                 <div className="text-right ml-2">
                   <p className="text-lg font-black text-accent">{p.balance}₽</p>
+                  <p className="text-[9px] font-black text-muted-foreground uppercase mt-0.5">
+                    Закрыто: {doneCounts[p.user_id] || 0}
+                  </p>
                 </div>
               </div>
 
