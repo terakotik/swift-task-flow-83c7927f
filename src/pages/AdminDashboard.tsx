@@ -367,6 +367,51 @@ export default function AdminDashboard() {
           </>
         )}
 
+        {activeTab === 'users' && (
+          <>
+            {usersWithDone.length === 0 && (
+              <p className="text-center text-muted-foreground py-12">Нет выполненных заданий</p>
+            )}
+            {usersWithDone.map(u => {
+              const needsPayout = u.count >= 10;
+              return (
+                <div
+                  key={u.user_id}
+                  className={`p-5 rounded-2xl border shadow-sm space-y-3 ${
+                    needsPayout ? 'bg-destructive/15 border-destructive' : 'bg-card border-border'
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className={`font-black text-sm uppercase ${needsPayout ? 'text-destructive' : 'text-foreground'}`}>{u.name}</h3>
+                      <p className="text-[10px] text-muted-foreground font-bold mt-0.5">
+                        Последнее: {new Date(u.lastAt).toLocaleDateString('ru-RU')}
+                      </p>
+                    </div>
+                    <div className={`flex flex-col items-end ${needsPayout ? 'text-destructive' : 'text-primary'}`}>
+                      <span className="text-2xl font-black leading-none">{u.count}</span>
+                      <span className="text-[9px] font-black uppercase">заданий</span>
+                    </div>
+                  </div>
+                  {needsPayout && (
+                    <div className="flex items-center gap-2 bg-destructive text-destructive-foreground rounded-xl px-3 py-2">
+                      <AlertTriangle size={14} />
+                      <span className="text-[10px] font-black uppercase">Требуется выплата</span>
+                    </div>
+                  )}
+                  <Button
+                    onClick={() => openHistory(u.user_id, u.name)}
+                    variant="outline"
+                    className="w-full font-bold text-xs gap-2"
+                  >
+                    <History size={14} /> История ({u.count})
+                  </Button>
+                </div>
+              );
+            })}
+          </>
+        )}
+
         {activeTab === 'archive' && (
           <>
             {archivedTasks.length === 0 && (
