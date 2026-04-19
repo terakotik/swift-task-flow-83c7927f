@@ -147,20 +147,29 @@ export default function SuperAdmin() {
       toast({ title: 'Баланс уже 0₽' });
       return;
     }
-    if (!confirm(`Обнулить баланс ${profile.display_name || profile.email || 'пользователя'} (${profile.balance}₽)? Используется после выплаты.`)) return;
+    if (!confirm(`Обнулить баланс ${profile.display_name || profile.email || 'пользователя'} (${profile.balance}₽)? История закрытых заданий тоже обнулится. Используется после выплаты.`)) return;
     setAdjustingId(profile.user_id);
     const { error } = await supabase
       .from('profiles')
       .update({ balance: 0 })
       .eq('user_id', profile.user_id);
+    if (!error) {
+      // Архивируем закрытые задания (done -> paid), чтобы счётчик и история обнулились
+      await supabase
+        .from('completed_tasks')
+        .update({ status: 'paid' })
+        .eq('user_id', profile.user_id)
+        .eq('status', 'done');
+    }
     setAdjustingId(null);
     if (error) {
       toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
       return;
     }
     setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: 0 } : p));
+    setDoneCounts(prev => ({ ...prev, [profile.user_id]: 0 }));
     toast({
-      title: 'Баланс обнулён',
+      title: 'Баланс и история обнулены',
       description: `${profile.display_name || profile.email || 'Пользователь'} • выплата ${profile.balance}₽ зафиксирована`,
     });
   };
