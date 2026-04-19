@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users } from 'lucide-react';
+import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle } from 'lucide-react';
 
 interface CompletedTask {
   id: string;
@@ -97,8 +97,10 @@ export default function AdminDashboard() {
   const [allTasks, setAllTasks] = useState<TaskInfo[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
   const [taskText, setTaskText] = useState('');
-  const [activeTab, setActiveTab] = useState<'pending' | 'done' | 'archive' | 'mytasks'>('mytasks');
+  const [activeTab, setActiveTab] = useState<'pending' | 'done' | 'archive' | 'mytasks' | 'users'>('mytasks');
   const [taskExecutorCounts, setTaskExecutorCounts] = useState<Record<string, number>>({});
+  const [historyUser, setHistoryUser] = useState<{ user_id: string; name: string } | null>(null);
+  const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string }>>([]);
 
   // Timer selection state
   const [parsedTask, setParsedTask] = useState<ReturnType<typeof parseTaskText>>(null);
@@ -241,6 +243,37 @@ export default function AdminDashboard() {
   const archivedTasks = allTasks.filter(t => t.status === 'archived');
   const activeTasks = allTasks.filter(t => t.status === 'available');
 
+  // Aggregate done tasks per user (these reset to 'paid' after super-admin payout)
+  const usersWithDone = (() => {
+    const map = new Map<string, { user_id: string; name: string; count: number; lastAt: string }>();
+    completedTasks
+      .filter(c => c.status === 'done')
+      .forEach(c => {
+        const name = c.executor_name ? c.executor_name.split('@')[0] : 'N/A';
+        const prev = map.get(c.user_id);
+        if (prev) {
+          prev.count += 1;
+          if (c.created_at > prev.lastAt) prev.lastAt = c.created_at;
+        } else {
+          map.set(c.user_id, { user_id: c.user_id, name, count: 1, lastAt: c.created_at });
+        }
+      });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  })();
+
+  const openHistory = (user_id: string, name: string) => {
+    const items = completedTasks
+      .filter(c => c.user_id === user_id && c.status === 'done')
+      .map(c => ({
+        id: c.id,
+        order_number: c.order_number,
+        completed_at: (c as any).completed_at ?? c.created_at,
+        task_name: c.tasks?.name ?? 'Задание',
+      }));
+    setHistoryItems(items);
+    setHistoryUser({ user_id, name });
+  };
+
   const splitName = (fullName: string) => {
     const parts = fullName.split(' · ');
     return { restaurant: parts[0], street: parts[1] || '' };
@@ -269,22 +302,29 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
-        <div className="flex gap-1.5">
-          {(['pending', 'done', 'mytasks', 'archive'] as const).map(tab => {
+        <div className="flex gap-1.5 flex-wrap">
+          {(['pending', 'done', 'mytasks', 'users', 'archive'] as const).map(tab => {
             const pendingCount = completedTasks.filter(c => c.status === 'pending').length;
             const showDot = tab === 'pending' && pendingCount > 0 && activeTab !== 'pending';
+            const needsPayoutCount = usersWithDone.filter(u => u.count >= 10).length;
+            const showUsersAlert = tab === 'users' && needsPayoutCount > 0 && activeTab !== 'users';
             return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`relative flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${activeTab === tab ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                className={`relative flex-1 min-w-[60px] py-2 rounded-xl text-[10px] font-black uppercase ${activeTab === tab ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
               >
                 {showDot && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full text-[8px] text-destructive-foreground flex items-center justify-center font-black animate-pulse">
                     {pendingCount}
                   </span>
                 )}
-                {tab === 'pending' ? 'Заявки' : tab === 'done' ? 'Готовые' : tab === 'mytasks' ? 'Задания' : 'Архив'}
+                {showUsersAlert && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full text-[8px] text-destructive-foreground flex items-center justify-center font-black animate-pulse">
+                    {needsPayoutCount}
+                  </span>
+                )}
+                {tab === 'pending' ? 'Заявки' : tab === 'done' ? 'Готовые' : tab === 'mytasks' ? 'Задания' : tab === 'users' ? 'Юзеры' : 'Архив'}
               </button>
             );
           })}
@@ -320,6 +360,51 @@ export default function AdminDashboard() {
                   </div>
                   <Button onClick={() => archiveTask(task.id)} variant="outline" className="w-full font-bold text-xs gap-2">
                     <Archive size={14} /> Архивировать
+                  </Button>
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        {activeTab === 'users' && (
+          <>
+            {usersWithDone.length === 0 && (
+              <p className="text-center text-muted-foreground py-12">Нет выполненных заданий</p>
+            )}
+            {usersWithDone.map(u => {
+              const needsPayout = u.count >= 10;
+              return (
+                <div
+                  key={u.user_id}
+                  className={`p-5 rounded-2xl border shadow-sm space-y-3 ${
+                    needsPayout ? 'bg-destructive/15 border-destructive' : 'bg-card border-border'
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className={`font-black text-sm uppercase ${needsPayout ? 'text-destructive' : 'text-foreground'}`}>{u.name}</h3>
+                      <p className="text-[10px] text-muted-foreground font-bold mt-0.5">
+                        Последнее: {new Date(u.lastAt).toLocaleDateString('ru-RU')}
+                      </p>
+                    </div>
+                    <div className={`flex flex-col items-end ${needsPayout ? 'text-destructive' : 'text-primary'}`}>
+                      <span className="text-2xl font-black leading-none">{u.count}</span>
+                      <span className="text-[9px] font-black uppercase">заданий</span>
+                    </div>
+                  </div>
+                  {needsPayout && (
+                    <div className="flex items-center gap-2 bg-destructive text-destructive-foreground rounded-xl px-3 py-2">
+                      <AlertTriangle size={14} />
+                      <span className="text-[10px] font-black uppercase">Требуется выплата</span>
+                    </div>
+                  )}
+                  <Button
+                    onClick={() => openHistory(u.user_id, u.name)}
+                    variant="outline"
+                    className="w-full font-bold text-xs gap-2"
+                  >
+                    <History size={14} /> История ({u.count})
                   </Button>
                 </div>
               );
@@ -457,6 +542,50 @@ export default function AdminDashboard() {
             <Button onClick={confirmAddTask} className="w-full font-black uppercase bg-accent text-accent-foreground hover:bg-accent/90 rounded-2xl h-14 text-base">
               Добавить задание
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {historyUser && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setHistoryUser(null)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-6 pb-10 max-h-[80vh] flex flex-col animate-in slide-in-from-bottom">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-4" />
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-lg font-black text-foreground">История</h2>
+                <p className="text-xs text-muted-foreground font-bold">{historyUser.name} · {historyItems.length} заданий</p>
+              </div>
+              <button onClick={() => setHistoryUser(null)} className="p-2 bg-muted rounded-full">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto space-y-2 flex-1">
+              {historyItems.length === 0 && (
+                <p className="text-center text-muted-foreground py-8 text-sm">Пусто</p>
+              )}
+              {historyItems.map((item, idx) => {
+                const { restaurant, street } = splitName(item.task_name);
+                return (
+                  <div key={item.id} className="bg-muted rounded-xl p-3 flex justify-between items-center">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xs font-black text-muted-foreground w-6 shrink-0">#{idx + 1}</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-foreground uppercase truncate">{restaurant}</p>
+                        {street && <p className="text-[10px] text-muted-foreground font-bold truncate">{street}</p>}
+                        <p className="text-[10px] text-muted-foreground font-bold">Заказ: {item.order_number}</p>
+                      </div>
+                    </div>
+                    {item.completed_at && (
+                      <span className="text-[10px] font-black text-muted-foreground shrink-0 ml-2">
+                        {new Date(item.completed_at).toLocaleDateString('ru-RU')}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
