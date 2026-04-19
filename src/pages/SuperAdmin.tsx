@@ -351,15 +351,25 @@ export default function SuperAdmin() {
                 </Button>
               </div>
 
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full h-9 rounded-xl gap-2 font-black uppercase text-xs border-warning/40 text-warning hover:bg-warning/10 hover:text-warning"
-                disabled={adjustingId === p.user_id || Number(p.balance) === 0}
-                onClick={() => resetBalance(p)}
-              >
-                <RotateCcw size={14} /> Обнулить баланс (выплачено)
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+                  onClick={() => openHistory(p)}
+                >
+                  <History size={14} /> История ({doneCounts[p.user_id] || 0})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs border-warning/40 text-warning hover:bg-warning/10 hover:text-warning"
+                  disabled={adjustingId === p.user_id || Number(p.balance) === 0}
+                  onClick={() => resetBalance(p)}
+                >
+                  <RotateCcw size={14} /> Обнулить
+                </Button>
+              </div>
             </div>
           );
         })}
