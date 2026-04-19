@@ -243,6 +243,37 @@ export default function AdminDashboard() {
   const archivedTasks = allTasks.filter(t => t.status === 'archived');
   const activeTasks = allTasks.filter(t => t.status === 'available');
 
+  // Aggregate done tasks per user (these reset to 'paid' after super-admin payout)
+  const usersWithDone = (() => {
+    const map = new Map<string, { user_id: string; name: string; count: number; lastAt: string }>();
+    completedTasks
+      .filter(c => c.status === 'done')
+      .forEach(c => {
+        const name = c.executor_name ? c.executor_name.split('@')[0] : 'N/A';
+        const prev = map.get(c.user_id);
+        if (prev) {
+          prev.count += 1;
+          if (c.created_at > prev.lastAt) prev.lastAt = c.created_at;
+        } else {
+          map.set(c.user_id, { user_id: c.user_id, name, count: 1, lastAt: c.created_at });
+        }
+      });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  })();
+
+  const openHistory = (user_id: string, name: string) => {
+    const items = completedTasks
+      .filter(c => c.user_id === user_id && c.status === 'done')
+      .map(c => ({
+        id: c.id,
+        order_number: c.order_number,
+        completed_at: (c as any).completed_at ?? c.created_at,
+        task_name: c.tasks?.name ?? 'Задание',
+      }));
+    setHistoryItems(items);
+    setHistoryUser({ user_id, name });
+  };
+
   const splitName = (fullName: string) => {
     const parts = fullName.split(' · ');
     return { restaurant: parts[0], street: parts[1] || '' };
