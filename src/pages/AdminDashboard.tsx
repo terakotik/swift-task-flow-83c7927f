@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users } from 'lucide-react';
+import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle } from 'lucide-react';
 
 interface CompletedTask {
   id: string;
