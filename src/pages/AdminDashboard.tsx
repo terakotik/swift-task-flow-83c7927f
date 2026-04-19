@@ -97,8 +97,10 @@ export default function AdminDashboard() {
   const [allTasks, setAllTasks] = useState<TaskInfo[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
   const [taskText, setTaskText] = useState('');
-  const [activeTab, setActiveTab] = useState<'pending' | 'done' | 'archive' | 'mytasks'>('mytasks');
+  const [activeTab, setActiveTab] = useState<'pending' | 'done' | 'archive' | 'mytasks' | 'users'>('mytasks');
   const [taskExecutorCounts, setTaskExecutorCounts] = useState<Record<string, number>>({});
+  const [historyUser, setHistoryUser] = useState<{ user_id: string; name: string } | null>(null);
+  const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string }>>([]);
 
   // Timer selection state
   const [parsedTask, setParsedTask] = useState<ReturnType<typeof parseTaskText>>(null);
