@@ -302,22 +302,29 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
-        <div className="flex gap-1.5">
-          {(['pending', 'done', 'mytasks', 'archive'] as const).map(tab => {
+        <div className="flex gap-1.5 flex-wrap">
+          {(['pending', 'done', 'mytasks', 'users', 'archive'] as const).map(tab => {
             const pendingCount = completedTasks.filter(c => c.status === 'pending').length;
             const showDot = tab === 'pending' && pendingCount > 0 && activeTab !== 'pending';
+            const needsPayoutCount = usersWithDone.filter(u => u.count >= 10).length;
+            const showUsersAlert = tab === 'users' && needsPayoutCount > 0 && activeTab !== 'users';
             return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`relative flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${activeTab === tab ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                className={`relative flex-1 min-w-[60px] py-2 rounded-xl text-[10px] font-black uppercase ${activeTab === tab ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
               >
                 {showDot && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full text-[8px] text-destructive-foreground flex items-center justify-center font-black animate-pulse">
                     {pendingCount}
                   </span>
                 )}
-                {tab === 'pending' ? 'Заявки' : tab === 'done' ? 'Готовые' : tab === 'mytasks' ? 'Задания' : 'Архив'}
+                {showUsersAlert && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full text-[8px] text-destructive-foreground flex items-center justify-center font-black animate-pulse">
+                    {needsPayoutCount}
+                  </span>
+                )}
+                {tab === 'pending' ? 'Заявки' : tab === 'done' ? 'Готовые' : tab === 'mytasks' ? 'Задания' : tab === 'users' ? 'Юзеры' : 'Архив'}
               </button>
             );
           })}
