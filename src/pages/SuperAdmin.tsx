@@ -30,6 +30,17 @@ interface Task {
   status: string;
 }
 
+interface CompletedTaskRow {
+  id: string;
+  order_number: string;
+  status: string;
+  user_id: string;
+  task_id: string;
+  completed_at: string | null;
+  created_at: string;
+  tasks: { name: string } | null;
+}
+
 export default function SuperAdmin() {
   const { user, loading, isAdmin, signOut } = useAuth();
   const { toast } = useToast();
@@ -41,6 +52,10 @@ export default function SuperAdmin() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [adjustAmounts, setAdjustAmounts] = useState<Record<string, string>>({});
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
+  const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
+  const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
+  const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
@@ -51,10 +66,11 @@ export default function SuperAdmin() {
   }, [isSuperAdmin]);
 
   const loadData = async () => {
-    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }] = await Promise.all([
+    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: doneData }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status').order('created_at', { ascending: false }),
+      supabase.from('completed_tasks').select('user_id').eq('status', 'done'),
     ]);
 
     if (profilesError || rolesError || tasksError) {
@@ -65,6 +81,23 @@ export default function SuperAdmin() {
     setProfiles(profilesData ?? []);
     setRoles(rolesData ?? []);
     setTasks(tasksData ?? []);
+
+    const counts: Record<string, number> = {};
+    (doneData ?? []).forEach(d => { counts[d.user_id] = (counts[d.user_id] || 0) + 1; });
+    setDoneCounts(counts);
+  };
+
+  const openHistory = async (profile: UserProfile) => {
+    setHistoryUser(profile);
+    setHistoryLoading(true);
+    const { data } = await supabase
+      .from('completed_tasks')
+      .select('id, order_number, status, user_id, task_id, completed_at, created_at, tasks(name)')
+      .eq('user_id', profile.user_id)
+      .eq('status', 'done')
+      .order('completed_at', { ascending: false });
+    setHistoryItems((data as any) ?? []);
+    setHistoryLoading(false);
   };
 
   const getUserRole = (userId: string) => {
