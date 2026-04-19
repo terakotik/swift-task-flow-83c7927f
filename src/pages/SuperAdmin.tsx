@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw } from 'lucide-react';
+import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
 
@@ -30,6 +30,17 @@ interface Task {
   status: string;
 }
 
+interface CompletedTaskRow {
+  id: string;
+  order_number: string;
+  status: string;
+  user_id: string;
+  task_id: string;
+  completed_at: string | null;
+  created_at: string;
+  tasks: { name: string } | null;
+}
+
 export default function SuperAdmin() {
   const { user, loading, isAdmin, signOut } = useAuth();
   const { toast } = useToast();
@@ -41,6 +52,10 @@ export default function SuperAdmin() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [adjustAmounts, setAdjustAmounts] = useState<Record<string, string>>({});
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
+  const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
+  const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
+  const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
@@ -51,10 +66,11 @@ export default function SuperAdmin() {
   }, [isSuperAdmin]);
 
   const loadData = async () => {
-    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }] = await Promise.all([
+    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: doneData }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status').order('created_at', { ascending: false }),
+      supabase.from('completed_tasks').select('user_id').eq('status', 'done'),
     ]);
 
     if (profilesError || rolesError || tasksError) {
@@ -65,6 +81,23 @@ export default function SuperAdmin() {
     setProfiles(profilesData ?? []);
     setRoles(rolesData ?? []);
     setTasks(tasksData ?? []);
+
+    const counts: Record<string, number> = {};
+    (doneData ?? []).forEach(d => { counts[d.user_id] = (counts[d.user_id] || 0) + 1; });
+    setDoneCounts(counts);
+  };
+
+  const openHistory = async (profile: UserProfile) => {
+    setHistoryUser(profile);
+    setHistoryLoading(true);
+    const { data } = await supabase
+      .from('completed_tasks')
+      .select('id, order_number, status, user_id, task_id, completed_at, created_at, tasks(name)')
+      .eq('user_id', profile.user_id)
+      .eq('status', 'done')
+      .order('completed_at', { ascending: false });
+    setHistoryItems((data as any) ?? []);
+    setHistoryLoading(false);
   };
 
   const getUserRole = (userId: string) => {
@@ -114,20 +147,29 @@ export default function SuperAdmin() {
       toast({ title: 'Баланс уже 0₽' });
       return;
     }
-    if (!confirm(`Обнулить баланс ${profile.display_name || profile.email || 'пользователя'} (${profile.balance}₽)? Используется после выплаты.`)) return;
+    if (!confirm(`Обнулить баланс ${profile.display_name || profile.email || 'пользователя'} (${profile.balance}₽)? История закрытых заданий тоже обнулится. Используется после выплаты.`)) return;
     setAdjustingId(profile.user_id);
     const { error } = await supabase
       .from('profiles')
       .update({ balance: 0 })
       .eq('user_id', profile.user_id);
+    if (!error) {
+      // Архивируем закрытые задания (done -> paid), чтобы счётчик и история обнулились
+      await supabase
+        .from('completed_tasks')
+        .update({ status: 'paid' })
+        .eq('user_id', profile.user_id)
+        .eq('status', 'done');
+    }
     setAdjustingId(null);
     if (error) {
       toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
       return;
     }
     setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: 0 } : p));
+    setDoneCounts(prev => ({ ...prev, [profile.user_id]: 0 }));
     toast({
-      title: 'Баланс обнулён',
+      title: 'Баланс и история обнулены',
       description: `${profile.display_name || profile.email || 'Пользователь'} • выплата ${profile.balance}₽ зафиксирована`,
     });
   };
@@ -274,6 +316,9 @@ export default function SuperAdmin() {
                 </div>
                 <div className="text-right ml-2">
                   <p className="text-lg font-black text-accent">{p.balance}₽</p>
+                  <p className="text-[9px] font-black text-muted-foreground uppercase mt-0.5">
+                    Закрыто: {doneCounts[p.user_id] || 0}
+                  </p>
                 </div>
               </div>
 
@@ -306,15 +351,25 @@ export default function SuperAdmin() {
                 </Button>
               </div>
 
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full h-9 rounded-xl gap-2 font-black uppercase text-xs border-warning/40 text-warning hover:bg-warning/10 hover:text-warning"
-                disabled={adjustingId === p.user_id || Number(p.balance) === 0}
-                onClick={() => resetBalance(p)}
-              >
-                <RotateCcw size={14} /> Обнулить баланс (выплачено)
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+                  onClick={() => openHistory(p)}
+                >
+                  <History size={14} /> История ({doneCounts[p.user_id] || 0})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs border-warning/40 text-warning hover:bg-warning/10 hover:text-warning"
+                  disabled={adjustingId === p.user_id || Number(p.balance) === 0}
+                  onClick={() => resetBalance(p)}
+                >
+                  <RotateCcw size={14} /> Обнулить
+                </Button>
+              </div>
             </div>
           );
         })}
@@ -342,6 +397,56 @@ export default function SuperAdmin() {
           <p className="text-center text-muted-foreground py-8">Нет заданий</p>
         )}
       </main>
+
+      {/* History modal */}
+      {historyUser && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setHistoryUser(null)} />
+          <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] bg-card rounded-t-[40px] p-6 pb-10 animate-in slide-in-from-bottom flex flex-col">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-4 shrink-0" />
+            <div className="flex justify-between items-start mb-4 shrink-0">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-black text-foreground truncate">
+                  {historyUser.display_name || historyUser.email || 'Пользователь'}
+                </h2>
+                <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">
+                  Закрытых заданий: {historyItems.length} • Баланс {historyUser.balance}₽
+                </p>
+              </div>
+              <button onClick={() => setHistoryUser(null)} className="p-2 bg-muted rounded-full">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto space-y-2 -mx-2 px-2">
+              {historyLoading && (
+                <p className="text-center text-muted-foreground py-8 text-sm">Загрузка...</p>
+              )}
+              {!historyLoading && historyItems.length === 0 && (
+                <p className="text-center text-muted-foreground py-8 text-sm">
+                  Нет закрытых заданий после последней выплаты
+                </p>
+              )}
+              {historyItems.map(item => {
+                const date = item.completed_at || item.created_at;
+                return (
+                  <div key={item.id} className="bg-muted/50 rounded-xl p-3 flex items-center gap-3">
+                    <CheckCircle size={18} className="text-accent shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-black text-foreground truncate">
+                        {item.tasks?.name || 'Задание'}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-bold">
+                        Заказ №{item.order_number} • {new Date(date).toLocaleString('ru-RU')}
+                      </p>
+                    </div>
+                    <span className="text-sm font-black text-accent shrink-0">+20₽</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
