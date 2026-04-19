@@ -545,6 +545,50 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* History Modal */}
+      {historyUser && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setHistoryUser(null)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-6 pb-10 max-h-[80vh] flex flex-col animate-in slide-in-from-bottom">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-4" />
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-lg font-black text-foreground">История</h2>
+                <p className="text-xs text-muted-foreground font-bold">{historyUser.name} · {historyItems.length} заданий</p>
+              </div>
+              <button onClick={() => setHistoryUser(null)} className="p-2 bg-muted rounded-full">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto space-y-2 flex-1">
+              {historyItems.length === 0 && (
+                <p className="text-center text-muted-foreground py-8 text-sm">Пусто</p>
+              )}
+              {historyItems.map((item, idx) => {
+                const { restaurant, street } = splitName(item.task_name);
+                return (
+                  <div key={item.id} className="bg-muted rounded-xl p-3 flex justify-between items-center">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xs font-black text-muted-foreground w-6 shrink-0">#{idx + 1}</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-foreground uppercase truncate">{restaurant}</p>
+                        {street && <p className="text-[10px] text-muted-foreground font-bold truncate">{street}</p>}
+                        <p className="text-[10px] text-muted-foreground font-bold">Заказ: {item.order_number}</p>
+                      </div>
+                    </div>
+                    {item.completed_at && (
+                      <span className="text-[10px] font-black text-muted-foreground shrink-0 ml-2">
+                        {new Date(item.completed_at).toLocaleDateString('ru-RU')}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
