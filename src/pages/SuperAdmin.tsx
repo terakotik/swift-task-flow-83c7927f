@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus } from 'lucide-react';
+import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
 
@@ -103,6 +103,33 @@ export default function SuperAdmin() {
 
     await loadData();
     toast({ title: 'Все задания удалены' });
+  };
+
+  const resetBalance = async (profile: UserProfile) => {
+    if (!isAdmin && !currentUserIsAdmin) {
+      toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
+      return;
+    }
+    if (Number(profile.balance) === 0) {
+      toast({ title: 'Баланс уже 0₽' });
+      return;
+    }
+    if (!confirm(`Обнулить баланс ${profile.display_name || profile.email || 'пользователя'} (${profile.balance}₽)? Используется после выплаты.`)) return;
+    setAdjustingId(profile.user_id);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ balance: 0 })
+      .eq('user_id', profile.user_id);
+    setAdjustingId(null);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: 0 } : p));
+    toast({
+      title: 'Баланс обнулён',
+      description: `${profile.display_name || profile.email || 'Пользователь'} • выплата ${profile.balance}₽ зафиксирована`,
+    });
   };
 
   const adjustBalance = async (profile: UserProfile, delta: number) => {
@@ -278,6 +305,16 @@ export default function SuperAdmin() {
                   <Minus size={16} />
                 </Button>
               </div>
+
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full h-9 rounded-xl gap-2 font-black uppercase text-xs border-warning/40 text-warning hover:bg-warning/10 hover:text-warning"
+                disabled={adjustingId === p.user_id || Number(p.balance) === 0}
+                onClick={() => resetBalance(p)}
+              >
+                <RotateCcw size={14} /> Обнулить баланс (выплачено)
+              </Button>
             </div>
           );
         })}
