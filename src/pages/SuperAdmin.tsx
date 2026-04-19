@@ -397,6 +397,56 @@ export default function SuperAdmin() {
           <p className="text-center text-muted-foreground py-8">Нет заданий</p>
         )}
       </main>
+
+      {/* History modal */}
+      {historyUser && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setHistoryUser(null)} />
+          <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] bg-card rounded-t-[40px] p-6 pb-10 animate-in slide-in-from-bottom flex flex-col">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-4 shrink-0" />
+            <div className="flex justify-between items-start mb-4 shrink-0">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-black text-foreground truncate">
+                  {historyUser.display_name || historyUser.email || 'Пользователь'}
+                </h2>
+                <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">
+                  Закрытых заданий: {historyItems.length} • Баланс {historyUser.balance}₽
+                </p>
+              </div>
+              <button onClick={() => setHistoryUser(null)} className="p-2 bg-muted rounded-full">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto space-y-2 -mx-2 px-2">
+              {historyLoading && (
+                <p className="text-center text-muted-foreground py-8 text-sm">Загрузка...</p>
+              )}
+              {!historyLoading && historyItems.length === 0 && (
+                <p className="text-center text-muted-foreground py-8 text-sm">
+                  Нет закрытых заданий после последней выплаты
+                </p>
+              )}
+              {historyItems.map(item => {
+                const date = item.completed_at || item.created_at;
+                return (
+                  <div key={item.id} className="bg-muted/50 rounded-xl p-3 flex items-center gap-3">
+                    <CheckCircle size={18} className="text-accent shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-black text-foreground truncate">
+                        {item.tasks?.name || 'Задание'}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-bold">
+                        Заказ №{item.order_number} • {new Date(date).toLocaleString('ru-RU')}
+                      </p>
+                    </div>
+                    <span className="text-sm font-black text-accent shrink-0">+20₽</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
