@@ -384,7 +384,9 @@ export default function AdminDashboard() {
   };
 
   const filtered = completedTasks.filter(ct =>
-    activeTab === 'pending' ? ct.status !== 'done' : ct.status === 'done'
+    activeTab === 'pending'
+      ? (ct.status === 'pending' || ct.status === 'accepted')
+      : (ct.status === 'done' || ct.status === 'rejected')
   );
 
   return (
