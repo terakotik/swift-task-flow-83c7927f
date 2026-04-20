@@ -94,7 +94,7 @@ export default function SuperAdmin() {
       .from('completed_tasks')
       .select('id, order_number, status, user_id, task_id, completed_at, created_at, tasks(name)')
       .eq('user_id', profile.user_id)
-      .eq('status', 'done')
+      .in('status', ['done', 'paid'])
       .order('completed_at', { ascending: false });
     setHistoryItems((data as any) ?? []);
     setHistoryLoading(false);
@@ -147,7 +147,7 @@ export default function SuperAdmin() {
       toast({ title: 'Баланс уже 0₽' });
       return;
     }
-    if (!confirm(`Обнулить баланс ${profile.display_name || profile.email || 'пользователя'} (${profile.balance}₽)? История закрытых заданий тоже обнулится. Используется после выплаты.`)) return;
+    if (!confirm(`Провести выплату ${profile.display_name || profile.email || 'пользователя'} на сумму ${profile.balance}₽? Текущий баланс и счётчик закроются, а записи останутся в истории как выплаченные.`)) return;
     setAdjustingId(profile.user_id);
     const { error } = await supabase
       .from('profiles')
@@ -169,7 +169,7 @@ export default function SuperAdmin() {
     setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: 0 } : p));
     setDoneCounts(prev => ({ ...prev, [profile.user_id]: 0 }));
     toast({
-      title: 'Баланс и история обнулены',
+      title: 'Выплата проведена',
       description: `${profile.display_name || profile.email || 'Пользователь'} • выплата ${profile.balance}₽ зафиксирована`,
     });
   };
@@ -362,12 +362,11 @@ export default function SuperAdmin() {
                 </Button>
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs border-warning/40 text-warning hover:bg-warning/10 hover:text-warning"
+                  className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs bg-accent text-accent-foreground hover:bg-accent/90"
                   disabled={adjustingId === p.user_id || Number(p.balance) === 0}
                   onClick={() => resetBalance(p)}
                 >
-                  <RotateCcw size={14} /> Обнулить
+                  <RotateCcw size={14} /> Выплата
                 </Button>
               </div>
             </div>
@@ -410,7 +409,7 @@ export default function SuperAdmin() {
                   {historyUser.display_name || historyUser.email || 'Пользователь'}
                 </h2>
                 <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">
-                  Закрытых заданий: {historyItems.length} • Баланс {historyUser.balance}₽
+                  Записей: {historyItems.length} • Баланс {historyUser.balance}₽
                 </p>
               </div>
               <button onClick={() => setHistoryUser(null)} className="p-2 bg-muted rounded-full">
@@ -423,14 +422,15 @@ export default function SuperAdmin() {
               )}
               {!historyLoading && historyItems.length === 0 && (
                 <p className="text-center text-muted-foreground py-8 text-sm">
-                  Нет закрытых заданий после последней выплаты
+                  История пока пуста
                 </p>
               )}
               {historyItems.map(item => {
                 const date = item.completed_at || item.created_at;
+                const isPaid = item.status === 'paid';
                 return (
                   <div key={item.id} className="bg-muted/50 rounded-xl p-3 flex items-center gap-3">
-                    <CheckCircle size={18} className="text-accent shrink-0" />
+                    <CheckCircle size={18} className={`${isPaid ? 'text-accent' : 'text-warning'} shrink-0`} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-black text-foreground truncate">
                         {item.tasks?.name || 'Задание'}
@@ -439,7 +439,12 @@ export default function SuperAdmin() {
                         Заказ №{item.order_number} • {new Date(date).toLocaleString('ru-RU')}
                       </p>
                     </div>
-                    <span className="text-sm font-black text-accent shrink-0">+20₽</span>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${isPaid ? 'bg-accent/10 text-accent' : 'bg-warning/10 text-warning'}`}>
+                        {isPaid ? 'Выплачено' : 'К выплате'}
+                      </span>
+                      <span className="text-sm font-black text-accent">+20₽</span>
+                    </div>
                   </div>
                 );
               })}
