@@ -558,8 +558,14 @@ export default function AdminDashboard() {
             )}
             {filtered.map(ct => {
               const { restaurant, street } = splitName(ct.tasks?.name ?? 'Задание');
+              const isRejected = ct.status === 'rejected';
               return (
-                <div key={ct.id} className="bg-card p-5 rounded-2xl border border-border shadow-sm space-y-3">
+                <div
+                  key={ct.id}
+                  className={`p-5 rounded-2xl border shadow-sm space-y-3 ${
+                    isRejected ? 'bg-destructive/10 border-destructive/40' : 'bg-card border-border'
+                  }`}
+                >
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-black text-foreground text-sm uppercase">{restaurant}</h3>
@@ -570,8 +576,12 @@ export default function AdminDashboard() {
                       {ct.status === 'pending' && <Clock size={14} className="text-warning" />}
                       {ct.status === 'accepted' && <Package size={14} className="text-primary" />}
                       {ct.status === 'done' && <CheckCircle size={14} className="text-accent" />}
-                      <span className="text-[10px] font-black uppercase text-muted-foreground">
-                        {ct.status === 'pending' ? 'Ожидает' : ct.status === 'accepted' ? 'Принят' : 'Готово'}
+                      {ct.status === 'rejected' && <XCircle size={14} className="text-destructive" />}
+                      <span className={`text-[10px] font-black uppercase ${isRejected ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {ct.status === 'pending' ? 'Ожидает'
+                          : ct.status === 'accepted' ? 'Принят'
+                          : ct.status === 'done' ? 'Готово'
+                          : 'Отклонено'}
                       </span>
                     </div>
                   </div>
@@ -579,15 +589,30 @@ export default function AdminDashboard() {
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Номер заказа</p>
                     <p className="text-foreground font-black text-lg">{ct.order_number}</p>
                   </div>
-                  {ct.status !== 'done' && (
-                    <div className="flex gap-2">
-                      {ct.status === 'pending' && (
-                        <Button onClick={() => acceptTask(ct.id)} variant="outline" className="flex-1 font-bold text-xs">
-                          Принял заказ
+                  {isRejected && ct.reject_reason && (
+                    <div className="bg-destructive/15 rounded-xl p-3 border border-destructive/30">
+                      <p className="text-[10px] font-black text-destructive uppercase tracking-widest mb-1">Причина отклонения</p>
+                      <p className="text-foreground text-xs font-bold">{ct.reject_reason}</p>
+                    </div>
+                  )}
+                  {(ct.status === 'pending' || ct.status === 'accepted') && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        {ct.status === 'pending' && (
+                          <Button onClick={() => acceptTask(ct.id)} variant="outline" className="flex-1 font-bold text-xs">
+                            Принял заказ
+                          </Button>
+                        )}
+                        <Button onClick={() => completeTask(ct)} className="flex-1 font-bold text-xs bg-accent text-accent-foreground hover:bg-accent/90">
+                          Готово ✓
                         </Button>
-                      )}
-                      <Button onClick={() => completeTask(ct)} className="flex-1 font-bold text-xs bg-accent text-accent-foreground hover:bg-accent/90">
-                        Готово ✓
+                      </div>
+                      <Button
+                        onClick={() => openReject(ct)}
+                        variant="outline"
+                        className="w-full font-bold text-xs gap-2 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Ban size={14} /> Отклонить заявку
                       </Button>
                     </div>
                   )}
