@@ -810,6 +810,70 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Reject Reason Modal */}
+      {rejectTarget && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setRejectTarget(null)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-6 pb-10 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-4" />
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-lg font-black text-foreground">Отклонить заявку</h2>
+                <p className="text-xs text-muted-foreground font-bold">
+                  Заказ {rejectTarget.order_number} · {rejectTarget.executor_name?.split('@')[0] ?? 'N/A'}
+                </p>
+              </div>
+              <button onClick={() => setRejectTarget(null)} className="p-2 bg-muted rounded-full">
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">Быстрые причины</p>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {REJECT_PRESETS.map(p => (
+                <button
+                  key={p}
+                  onClick={() => setRejectReason(p)}
+                  className={`px-3 py-2 rounded-xl text-[11px] font-bold border transition-all ${
+                    rejectReason === p
+                      ? 'border-destructive bg-destructive/15 text-destructive'
+                      : 'border-border bg-muted text-foreground'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">Причина</p>
+            <Textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Опишите причину отклонения..."
+              className="min-h-[100px] mb-4 rounded-2xl"
+            />
+
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setRejectTarget(null)}
+                variant="outline"
+                className="flex-1 font-black uppercase rounded-2xl h-12"
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={submitReject}
+                disabled={!rejectReason.trim()}
+                variant="destructive"
+                className="flex-1 font-black uppercase rounded-2xl h-12 gap-2"
+              >
+                <Ban size={16} /> Отклонить
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
