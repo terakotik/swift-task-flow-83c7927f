@@ -193,6 +193,66 @@ export default function AdminDashboard() {
     toast({ title: 'Готово!' });
   };
 
+  const openTypeSelect = () => {
+    setShowTypeSelect(true);
+  };
+
+  const chooseTaskKind = (kind: 'text' | 'image') => {
+    setTaskKind(kind);
+    setShowTypeSelect(false);
+    setShowAddTask(true);
+  };
+
+  const handleImagePick = (file: File | null) => {
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const submitImageTask = async () => {
+    if (!imageFile || !imageAddr.trim()) {
+      toast({ title: 'Ошибка', description: 'Загрузите картинку и укажите адрес доставки.', variant: 'destructive' });
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const ext = imageFile.name.split('.').pop() || 'jpg';
+      const path = `tasks/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('task-images').upload(path, imageFile, {
+        contentType: imageFile.type,
+        upsert: false,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('task-images').getPublicUrl(path);
+
+      const task_id = 'img_' + Date.now();
+      const { error } = await supabase.from('tasks').insert({
+        task_id,
+        name: 'Задание с картинкой',
+        addr1: '',
+        addr2: imageAddr.trim(),
+        link: '',
+        image_url: pub.publicUrl,
+        task_type: 'image',
+      });
+      if (error) throw error;
+
+      setImageFile(null);
+      setImagePreview(null);
+      setImageAddr('');
+      setTaskKind(null);
+      setShowAddTask(false);
+      loadAllTasks();
+      toast({ title: 'Задание с картинкой добавлено' });
+    } catch (e: any) {
+      toast({ title: 'Ошибка', description: e.message, variant: 'destructive' });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleParseTask = () => {
     const parsed = parseTaskText(taskText);
     if (!parsed) {
