@@ -204,6 +204,27 @@ export default function AdminDashboard() {
     toast({ title: 'Готово!' });
   };
 
+  const openReject = (ct: CompletedTaskWithProfile) => {
+    setRejectTarget(ct);
+    setRejectReason('');
+  };
+
+  const submitReject = async () => {
+    if (!rejectTarget || !rejectReason.trim()) return;
+    const { error } = await supabase
+      .from('completed_tasks')
+      .update({ status: 'rejected', reject_reason: rejectReason.trim() })
+      .eq('id', rejectTarget.id);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setRejectTarget(null);
+    setRejectReason('');
+    loadCompletedTasks();
+    toast({ title: 'Заявка отклонена' });
+  };
+
   const openTypeSelect = () => {
     setShowTypeSelect(true);
   };
