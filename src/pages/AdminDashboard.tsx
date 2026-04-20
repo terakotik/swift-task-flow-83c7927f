@@ -366,7 +366,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowAddTask(true)} className="p-2 bg-accent/10 text-accent rounded-full">
+            <button onClick={openTypeSelect} className="p-2 bg-accent/10 text-accent rounded-full">
               <Plus size={24} />
             </button>
             <button onClick={signOut} className="p-2 bg-destructive/10 text-destructive rounded-full">
