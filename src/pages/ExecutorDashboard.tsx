@@ -248,6 +248,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const statusLabel = (s: string) => {
     if (s === 'pending') return { text: 'На проверке', icon: <Clock size={14} className="text-warning" />, color: 'text-warning' };
     if (s === 'accepted') return { text: 'Принят', icon: <Package size={14} className="text-primary" />, color: 'text-primary' };
+    if (s === 'rejected') return { text: 'Отклонено', icon: <XCircle size={14} className="text-destructive" />, color: 'text-destructive' };
     return { text: '+20₽ зачислено', icon: <CheckCircle size={14} className="text-accent" />, color: 'text-accent' };
   };
 
