@@ -103,6 +103,17 @@ export default function AdminDashboard() {
   const [historyUser, setHistoryUser] = useState<{ user_id: string; name: string } | null>(null);
   const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string }>>([]);
 
+  // Add task flow
+  const [showTypeSelect, setShowTypeSelect] = useState(false);
+  const [taskKind, setTaskKind] = useState<'text' | 'image' | null>(null);
+
+  // Image task state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageAddr, setImageAddr] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Timer selection state
   const [parsedTask, setParsedTask] = useState<ReturnType<typeof parseTaskText>>(null);
   const [showTimerSelect, setShowTimerSelect] = useState(false);
