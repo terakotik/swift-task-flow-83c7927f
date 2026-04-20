@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           id: string
           order_number: string
+          reject_reason: string | null
           status: string
           task_id: string
           user_id: string
@@ -31,6 +32,7 @@ export type Database = {
           created_at?: string
           id?: string
           order_number: string
+          reject_reason?: string | null
           status?: string
           task_id: string
           user_id: string
@@ -41,6 +43,7 @@ export type Database = {
           created_at?: string
           id?: string
           order_number?: string
+          reject_reason?: string | null
           status?: string
           task_id?: string
           user_id?: string
