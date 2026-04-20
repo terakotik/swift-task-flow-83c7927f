@@ -465,8 +465,18 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               const s = statusLabel(ct.status);
               const taskName = ct.tasks?.name ?? 'Задание';
               const nameParts = taskName.split(' · ');
+              const isRejected = ct.status === 'rejected';
               return (
-                <div key={ct.id} className={`bg-card p-5 rounded-2xl border shadow-sm space-y-2 ${ct.status === 'done' ? 'border-accent/30' : 'border-border'}`}>
+                <div
+                  key={ct.id}
+                  className={`p-5 rounded-2xl border shadow-sm space-y-2 ${
+                    ct.status === 'done'
+                      ? 'bg-card border-accent/30'
+                      : isRejected
+                        ? 'bg-destructive/10 border-destructive/40'
+                        : 'bg-card border-border'
+                  }`}
+                >
                   <div className="flex justify-between items-start">
                     <div className="flex-1 pr-3">
                       <h3 className="font-black text-foreground text-sm uppercase">{nameParts[0]}</h3>
@@ -483,6 +493,12 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                       )}
                     </div>
                   </div>
+                  {isRejected && ct.reject_reason && (
+                    <div className="bg-destructive/15 rounded-xl p-3 border border-destructive/30">
+                      <p className="text-[10px] font-black text-destructive uppercase tracking-widest mb-1">Причина отклонения</p>
+                      <p className="text-foreground text-xs font-bold">{ct.reject_reason}</p>
+                    </div>
+                  )}
                 </div>
               );
             })}
