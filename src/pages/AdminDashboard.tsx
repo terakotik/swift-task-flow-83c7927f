@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload } from 'lucide-react';
+import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban } from 'lucide-react';
 
 interface CompletedTask {
   id: string;
@@ -14,6 +14,7 @@ interface CompletedTask {
   created_at: string;
   user_id: string;
   task_id: string;
+  reject_reason?: string | null;
   tasks: { task_id: string; name: string } | null;
 }
 
