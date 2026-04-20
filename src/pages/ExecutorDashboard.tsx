@@ -76,6 +76,8 @@ const DEMO_TASKS: Task[] = [
     created_at: new Date(Date.now() - 30000).toISOString(),
     expires_at: new Date(Date.now() + 15 * 60000).toISOString(),
     created_by: null,
+    image_url: null,
+    task_type: 'text',
   },
   {
     id: 'demo-2',
@@ -88,6 +90,8 @@ const DEMO_TASKS: Task[] = [
     created_at: new Date(Date.now() - 120000).toISOString(),
     expires_at: null,
     created_by: null,
+    image_url: null,
+    task_type: 'text',
   },
   {
     id: 'demo-3',
@@ -100,6 +104,8 @@ const DEMO_TASKS: Task[] = [
     created_at: new Date(Date.now() - 600000).toISOString(),
     expires_at: new Date(Date.now() + 8 * 60000).toISOString(),
     created_by: null,
+    image_url: null,
+    task_type: 'text',
   },
 ];
 
