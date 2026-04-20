@@ -104,6 +104,16 @@ export default function AdminDashboard() {
   const [historyUser, setHistoryUser] = useState<{ user_id: string; name: string } | null>(null);
   const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string }>>([]);
 
+  // Reject flow
+  const [rejectTarget, setRejectTarget] = useState<CompletedTaskWithProfile | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const REJECT_PRESETS = [
+    'Неверный номер заказа',
+    'Заказ не найден в системе',
+    'Дубликат заявки',
+    'Заказ оформлен не там',
+  ];
+
   // Add task flow
   const [showTypeSelect, setShowTypeSelect] = useState(false);
   const [taskKind, setTaskKind] = useState<'text' | 'image' | null>(null);
