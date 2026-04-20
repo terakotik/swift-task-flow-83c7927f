@@ -411,22 +411,41 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
             )}
             {availableTasks.map(task => {
               const hasTimer = !!task.expires_at;
+              const isImage = task.task_type === 'image' && task.image_url;
               return (
                 <div
                   key={task.id}
                   className="task-card bg-card p-5 rounded-2xl border border-border shadow-sm flex justify-between items-center cursor-pointer active:scale-[0.98] transition-transform"
                   onClick={() => setCurrentTask(task)}
                 >
-                  <div className="flex-1 pr-4">
-                    <h3 className="font-black text-foreground text-sm uppercase">{task.name.split(' · ')[0]}</h3>
-                    {task.name.includes(' · ') && <p className="text-[10px] text-muted-foreground font-bold">{task.name.split(' · ')[1]}</p>}
-                    <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight break-all">ID: {task.task_id}</p>
-                    <NewOrTimeBadge createdAt={task.created_at} />
-                    {hasTimer && (
-                      <TimerBadge expiresAt={task.expires_at!} />
+                  <div className="flex-1 pr-4 flex gap-3 items-center min-w-0">
+                    {isImage && (
+                      <img
+                        src={task.image_url!}
+                        alt=""
+                        className="w-14 h-14 rounded-xl object-cover bg-muted shrink-0"
+                      />
                     )}
+                    <div className="min-w-0">
+                      {isImage ? (
+                        <>
+                          <h3 className="font-black text-foreground text-sm uppercase">Задание с картинкой</h3>
+                          <p className="text-[10px] text-muted-foreground font-bold truncate">→ {task.addr2}</p>
+                        </>
+                      ) : (
+                        <>
+                          <h3 className="font-black text-foreground text-sm uppercase">{(task.name ?? '').split(' · ')[0]}</h3>
+                          {(task.name ?? '').includes(' · ') && <p className="text-[10px] text-muted-foreground font-bold">{task.name!.split(' · ')[1]}</p>}
+                          <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight break-all">ID: {task.task_id}</p>
+                        </>
+                      )}
+                      <NewOrTimeBadge createdAt={task.created_at} />
+                      {hasTimer && (
+                        <TimerBadge expiresAt={task.expires_at!} />
+                      )}
+                    </div>
                   </div>
-                  <span className="text-[10px] font-black uppercase px-2 py-1 rounded-md bg-primary/10 text-primary">
+                  <span className="text-[10px] font-black uppercase px-2 py-1 rounded-md bg-primary/10 text-primary shrink-0">
                     Начать
                   </span>
                 </div>
