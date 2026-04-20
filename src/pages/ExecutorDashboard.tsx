@@ -203,7 +203,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
     if (!user) return;
     const { data } = await supabase
       .from('completed_tasks')
-      .select('id, order_number, status, created_at, task_id, tasks(name, task_id)')
+      .select('id, order_number, status, created_at, task_id, reject_reason, tasks(name, task_id)')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
     if (data) {
