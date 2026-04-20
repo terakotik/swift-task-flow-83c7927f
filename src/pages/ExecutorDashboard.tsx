@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon } from 'lucide-react';
+import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon, XCircle } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Task = Tables<'tasks'>;
@@ -15,6 +15,7 @@ interface CompletedTaskWithDetails {
   status: string;
   created_at: string;
   task_id: string;
+  reject_reason?: string | null;
   tasks: { name: string; task_id: string } | null;
 }
 
@@ -202,7 +203,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
     if (!user) return;
     const { data } = await supabase
       .from('completed_tasks')
-      .select('id, order_number, status, created_at, task_id, tasks(name, task_id)')
+      .select('id, order_number, status, created_at, task_id, reject_reason, tasks(name, task_id)')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
     if (data) {
@@ -247,6 +248,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const statusLabel = (s: string) => {
     if (s === 'pending') return { text: 'На проверке', icon: <Clock size={14} className="text-warning" />, color: 'text-warning' };
     if (s === 'accepted') return { text: 'Принят', icon: <Package size={14} className="text-primary" />, color: 'text-primary' };
+    if (s === 'rejected') return { text: 'Отклонено', icon: <XCircle size={14} className="text-destructive" />, color: 'text-destructive' };
     return { text: '+20₽ зачислено', icon: <CheckCircle size={14} className="text-accent" />, color: 'text-accent' };
   };
 
@@ -463,8 +465,18 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               const s = statusLabel(ct.status);
               const taskName = ct.tasks?.name ?? 'Задание';
               const nameParts = taskName.split(' · ');
+              const isRejected = ct.status === 'rejected';
               return (
-                <div key={ct.id} className={`bg-card p-5 rounded-2xl border shadow-sm space-y-2 ${ct.status === 'done' ? 'border-accent/30' : 'border-border'}`}>
+                <div
+                  key={ct.id}
+                  className={`p-5 rounded-2xl border shadow-sm space-y-2 ${
+                    ct.status === 'done'
+                      ? 'bg-card border-accent/30'
+                      : isRejected
+                        ? 'bg-destructive/10 border-destructive/40'
+                        : 'bg-card border-border'
+                  }`}
+                >
                   <div className="flex justify-between items-start">
                     <div className="flex-1 pr-3">
                       <h3 className="font-black text-foreground text-sm uppercase">{nameParts[0]}</h3>
@@ -481,6 +493,12 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                       )}
                     </div>
                   </div>
+                  {isRejected && ct.reject_reason && (
+                    <div className="bg-destructive/15 rounded-xl p-3 border border-destructive/30">
+                      <p className="text-[10px] font-black text-destructive uppercase tracking-widest mb-1">Причина отклонения</p>
+                      <p className="text-foreground text-xs font-bold">{ct.reject_reason}</p>
+                    </div>
+                  )}
                 </div>
               );
             })}

@@ -1,0 +1,1 @@
+ALTER TABLE public.completed_tasks ADD COLUMN IF NOT EXISTS reject_reason text;

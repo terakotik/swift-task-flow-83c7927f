@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload } from 'lucide-react';
+import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban } from 'lucide-react';
 
 interface CompletedTask {
   id: string;
@@ -14,6 +14,7 @@ interface CompletedTask {
   created_at: string;
   user_id: string;
   task_id: string;
+  reject_reason?: string | null;
   tasks: { task_id: string; name: string } | null;
 }
 
@@ -103,6 +104,16 @@ export default function AdminDashboard() {
   const [historyUser, setHistoryUser] = useState<{ user_id: string; name: string } | null>(null);
   const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string }>>([]);
 
+  // Reject flow
+  const [rejectTarget, setRejectTarget] = useState<CompletedTaskWithProfile | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const REJECT_PRESETS = [
+    'Неверный номер заказа',
+    'Заказ не найден в системе',
+    'Дубликат заявки',
+    'Заказ оформлен не там',
+  ];
+
   // Add task flow
   const [showTypeSelect, setShowTypeSelect] = useState(false);
   const [taskKind, setTaskKind] = useState<'text' | 'image' | null>(null);
@@ -191,6 +202,27 @@ export default function AdminDashboard() {
     }
     loadCompletedTasks();
     toast({ title: 'Готово!' });
+  };
+
+  const openReject = (ct: CompletedTaskWithProfile) => {
+    setRejectTarget(ct);
+    setRejectReason('');
+  };
+
+  const submitReject = async () => {
+    if (!rejectTarget || !rejectReason.trim()) return;
+    const { error } = await supabase
+      .from('completed_tasks')
+      .update({ status: 'rejected', reject_reason: rejectReason.trim() })
+      .eq('id', rejectTarget.id);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setRejectTarget(null);
+    setRejectReason('');
+    loadCompletedTasks();
+    toast({ title: 'Заявка отклонена' });
   };
 
   const openTypeSelect = () => {
@@ -352,7 +384,9 @@ export default function AdminDashboard() {
   };
 
   const filtered = completedTasks.filter(ct =>
-    activeTab === 'pending' ? ct.status !== 'done' : ct.status === 'done'
+    activeTab === 'pending'
+      ? (ct.status === 'pending' || ct.status === 'accepted')
+      : (ct.status === 'done' || ct.status === 'rejected')
   );
 
   return (
@@ -524,8 +558,14 @@ export default function AdminDashboard() {
             )}
             {filtered.map(ct => {
               const { restaurant, street } = splitName(ct.tasks?.name ?? 'Задание');
+              const isRejected = ct.status === 'rejected';
               return (
-                <div key={ct.id} className="bg-card p-5 rounded-2xl border border-border shadow-sm space-y-3">
+                <div
+                  key={ct.id}
+                  className={`p-5 rounded-2xl border shadow-sm space-y-3 ${
+                    isRejected ? 'bg-destructive/10 border-destructive/40' : 'bg-card border-border'
+                  }`}
+                >
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-black text-foreground text-sm uppercase">{restaurant}</h3>
@@ -536,8 +576,12 @@ export default function AdminDashboard() {
                       {ct.status === 'pending' && <Clock size={14} className="text-warning" />}
                       {ct.status === 'accepted' && <Package size={14} className="text-primary" />}
                       {ct.status === 'done' && <CheckCircle size={14} className="text-accent" />}
-                      <span className="text-[10px] font-black uppercase text-muted-foreground">
-                        {ct.status === 'pending' ? 'Ожидает' : ct.status === 'accepted' ? 'Принят' : 'Готово'}
+                      {ct.status === 'rejected' && <XCircle size={14} className="text-destructive" />}
+                      <span className={`text-[10px] font-black uppercase ${isRejected ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {ct.status === 'pending' ? 'Ожидает'
+                          : ct.status === 'accepted' ? 'Принят'
+                          : ct.status === 'done' ? 'Готово'
+                          : 'Отклонено'}
                       </span>
                     </div>
                   </div>
@@ -545,15 +589,30 @@ export default function AdminDashboard() {
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Номер заказа</p>
                     <p className="text-foreground font-black text-lg">{ct.order_number}</p>
                   </div>
-                  {ct.status !== 'done' && (
-                    <div className="flex gap-2">
-                      {ct.status === 'pending' && (
-                        <Button onClick={() => acceptTask(ct.id)} variant="outline" className="flex-1 font-bold text-xs">
-                          Принял заказ
+                  {isRejected && ct.reject_reason && (
+                    <div className="bg-destructive/15 rounded-xl p-3 border border-destructive/30">
+                      <p className="text-[10px] font-black text-destructive uppercase tracking-widest mb-1">Причина отклонения</p>
+                      <p className="text-foreground text-xs font-bold">{ct.reject_reason}</p>
+                    </div>
+                  )}
+                  {(ct.status === 'pending' || ct.status === 'accepted') && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        {ct.status === 'pending' && (
+                          <Button onClick={() => acceptTask(ct.id)} variant="outline" className="flex-1 font-bold text-xs">
+                            Принял заказ
+                          </Button>
+                        )}
+                        <Button onClick={() => completeTask(ct)} className="flex-1 font-bold text-xs bg-accent text-accent-foreground hover:bg-accent/90">
+                          Готово ✓
                         </Button>
-                      )}
-                      <Button onClick={() => completeTask(ct)} className="flex-1 font-bold text-xs bg-accent text-accent-foreground hover:bg-accent/90">
-                        Готово ✓
+                      </div>
+                      <Button
+                        onClick={() => openReject(ct)}
+                        variant="outline"
+                        className="w-full font-bold text-xs gap-2 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Ban size={14} /> Отклонить заявку
                       </Button>
                     </div>
                   )}
@@ -747,6 +806,70 @@ export default function AdminDashboard() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Reason Modal */}
+      {rejectTarget && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setRejectTarget(null)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-6 pb-10 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-4" />
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-lg font-black text-foreground">Отклонить заявку</h2>
+                <p className="text-xs text-muted-foreground font-bold">
+                  Заказ {rejectTarget.order_number} · {rejectTarget.executor_name?.split('@')[0] ?? 'N/A'}
+                </p>
+              </div>
+              <button onClick={() => setRejectTarget(null)} className="p-2 bg-muted rounded-full">
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">Быстрые причины</p>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {REJECT_PRESETS.map(p => (
+                <button
+                  key={p}
+                  onClick={() => setRejectReason(p)}
+                  className={`px-3 py-2 rounded-xl text-[11px] font-bold border transition-all ${
+                    rejectReason === p
+                      ? 'border-destructive bg-destructive/15 text-destructive'
+                      : 'border-border bg-muted text-foreground'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">Причина</p>
+            <Textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Опишите причину отклонения..."
+              className="min-h-[100px] mb-4 rounded-2xl"
+            />
+
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setRejectTarget(null)}
+                variant="outline"
+                className="flex-1 font-black uppercase rounded-2xl h-12"
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={submitReject}
+                disabled={!rejectReason.trim()}
+                variant="destructive"
+                className="flex-1 font-black uppercase rounded-2xl h-12 gap-2"
+              >
+                <Ban size={16} /> Отклонить
+              </Button>
             </div>
           </div>
         </div>
