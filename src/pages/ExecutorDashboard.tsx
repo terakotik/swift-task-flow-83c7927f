@@ -76,6 +76,8 @@ const DEMO_TASKS: Task[] = [
     created_at: new Date(Date.now() - 30000).toISOString(),
     expires_at: new Date(Date.now() + 15 * 60000).toISOString(),
     created_by: null,
+    image_url: null,
+    task_type: 'text',
   },
   {
     id: 'demo-2',
@@ -88,6 +90,8 @@ const DEMO_TASKS: Task[] = [
     created_at: new Date(Date.now() - 120000).toISOString(),
     expires_at: null,
     created_by: null,
+    image_url: null,
+    task_type: 'text',
   },
   {
     id: 'demo-3',
@@ -100,6 +104,8 @@ const DEMO_TASKS: Task[] = [
     created_at: new Date(Date.now() - 600000).toISOString(),
     expires_at: new Date(Date.now() + 8 * 60000).toISOString(),
     created_by: null,
+    image_url: null,
+    task_type: 'text',
   },
 ];
 
@@ -245,49 +251,79 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   };
 
   if (currentTask) {
+    const isImage = currentTask.task_type === 'image' && currentTask.image_url;
     return (
       <div className="max-w-md mx-auto min-h-screen p-4 space-y-4">
         <button onClick={() => setCurrentTask(null)} className="flex items-center gap-2 text-primary font-bold text-sm">
           <ArrowLeft size={18} /> Назад к списку
         </button>
         <div className="bg-card rounded-3xl p-6 shadow-sm border border-border space-y-6">
-          <div>
-            {(() => { const parts = currentTask.name.split(' · '); return (<>
-              <h2 className="text-xl font-black text-foreground">{parts[0]}</h2>
-              {parts[1] && <p className="text-xs text-muted-foreground font-bold">{parts[1]}</p>}
-            </>); })()}
-            <span className="text-[10px] bg-muted px-2 py-1 rounded text-muted-foreground font-black mt-2 inline-block uppercase tracking-wider break-all">
-              ID: {currentTask.task_id}
-            </span>
-          </div>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-primary uppercase tracking-widest">Адрес ресторана (Пункт А)</label>
-              <div className="flex items-center gap-3">
-                <span className="flex-1 text-foreground text-sm font-bold">{currentTask.addr1}</span>
-                <button onClick={() => copyText(currentTask.addr1)} className="shrink-0 p-3 bg-primary/10 rounded-xl text-primary">
-                  <Copy size={20} />
-                </button>
+          {isImage ? (
+            <>
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-primary uppercase tracking-widest">Задание (вся информация на картинке)</p>
+                <a href={currentTask.image_url!} target="_blank" rel="noopener noreferrer" className="block">
+                  <img
+                    src={currentTask.image_url!}
+                    alt="Задание"
+                    className="w-full rounded-2xl border border-border bg-muted object-contain max-h-[60vh]"
+                  />
+                </a>
+                <p className="text-[10px] text-muted-foreground font-bold text-center">Нажмите на картинку, чтобы открыть в полном размере</p>
               </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-accent uppercase tracking-widest">Адрес доставки (Пункт Б)</label>
-              <div className="flex items-center gap-3">
-                <span className="flex-1 text-foreground text-sm font-bold">{currentTask.addr2}</span>
-                <button onClick={() => copyText(currentTask.addr2)} className="shrink-0 p-3 bg-accent/10 rounded-xl text-accent">
-                  <Copy size={20} />
-                </button>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-accent uppercase tracking-widest">Адрес доставки</label>
+                <div className="flex items-center gap-3">
+                  <span className="flex-1 text-foreground text-sm font-bold">{currentTask.addr2}</span>
+                  <button onClick={() => copyText(currentTask.addr2 ?? '')} className="shrink-0 p-3 bg-accent/10 rounded-xl text-accent">
+                    <Copy size={20} />
+                  </button>
+                </div>
               </div>
-            </div>
-            <a
-              href={currentTask.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center w-full gap-3 bg-warning text-warning-foreground font-black py-4 rounded-2xl shadow-sm active:scale-95 transition-transform text-sm"
-            >
-              ПЕРЕЙТИ В ЯНДЕКС ЕДУ
-            </a>
-          </div>
+            </>
+          ) : (
+            <>
+              <div>
+                {(() => { const parts = (currentTask.name ?? '').split(' · '); return (<>
+                  <h2 className="text-xl font-black text-foreground">{parts[0]}</h2>
+                  {parts[1] && <p className="text-xs text-muted-foreground font-bold">{parts[1]}</p>}
+                </>); })()}
+                <span className="text-[10px] bg-muted px-2 py-1 rounded text-muted-foreground font-black mt-2 inline-block uppercase tracking-wider break-all">
+                  ID: {currentTask.task_id}
+                </span>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-primary uppercase tracking-widest">Адрес ресторана (Пункт А)</label>
+                  <div className="flex items-center gap-3">
+                    <span className="flex-1 text-foreground text-sm font-bold">{currentTask.addr1}</span>
+                    <button onClick={() => copyText(currentTask.addr1 ?? '')} className="shrink-0 p-3 bg-primary/10 rounded-xl text-primary">
+                      <Copy size={20} />
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-accent uppercase tracking-widest">Адрес доставки (Пункт Б)</label>
+                  <div className="flex items-center gap-3">
+                    <span className="flex-1 text-foreground text-sm font-bold">{currentTask.addr2}</span>
+                    <button onClick={() => copyText(currentTask.addr2 ?? '')} className="shrink-0 p-3 bg-accent/10 rounded-xl text-accent">
+                      <Copy size={20} />
+                    </button>
+                  </div>
+                </div>
+                {currentTask.link && (
+                  <a
+                    href={currentTask.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-full gap-3 bg-warning text-warning-foreground font-black py-4 rounded-2xl shadow-sm active:scale-95 transition-transform text-sm"
+                  >
+                    ПЕРЕЙТИ В ЯНДЕКС ЕДУ
+                  </a>
+                )}
+              </div>
+            </>
+          )}
           <div className="pt-4 border-t border-border">
             <Input
               value={orderInput}
@@ -375,22 +411,41 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
             )}
             {availableTasks.map(task => {
               const hasTimer = !!task.expires_at;
+              const isImage = task.task_type === 'image' && task.image_url;
               return (
                 <div
                   key={task.id}
                   className="task-card bg-card p-5 rounded-2xl border border-border shadow-sm flex justify-between items-center cursor-pointer active:scale-[0.98] transition-transform"
                   onClick={() => setCurrentTask(task)}
                 >
-                  <div className="flex-1 pr-4">
-                    <h3 className="font-black text-foreground text-sm uppercase">{task.name.split(' · ')[0]}</h3>
-                    {task.name.includes(' · ') && <p className="text-[10px] text-muted-foreground font-bold">{task.name.split(' · ')[1]}</p>}
-                    <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight break-all">ID: {task.task_id}</p>
-                    <NewOrTimeBadge createdAt={task.created_at} />
-                    {hasTimer && (
-                      <TimerBadge expiresAt={task.expires_at!} />
+                  <div className="flex-1 pr-4 flex gap-3 items-center min-w-0">
+                    {isImage && (
+                      <img
+                        src={task.image_url!}
+                        alt=""
+                        className="w-14 h-14 rounded-xl object-cover bg-muted shrink-0"
+                      />
                     )}
+                    <div className="min-w-0">
+                      {isImage ? (
+                        <>
+                          <h3 className="font-black text-foreground text-sm uppercase">Задание с картинкой</h3>
+                          <p className="text-[10px] text-muted-foreground font-bold truncate">→ {task.addr2}</p>
+                        </>
+                      ) : (
+                        <>
+                          <h3 className="font-black text-foreground text-sm uppercase">{(task.name ?? '').split(' · ')[0]}</h3>
+                          {(task.name ?? '').includes(' · ') && <p className="text-[10px] text-muted-foreground font-bold">{task.name!.split(' · ')[1]}</p>}
+                          <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight break-all">ID: {task.task_id}</p>
+                        </>
+                      )}
+                      <NewOrTimeBadge createdAt={task.created_at} />
+                      {hasTimer && (
+                        <TimerBadge expiresAt={task.expires_at!} />
+                      )}
+                    </div>
                   </div>
-                  <span className="text-[10px] font-black uppercase px-2 py-1 rounded-md bg-primary/10 text-primary">
+                  <span className="text-[10px] font-black uppercase px-2 py-1 rounded-md bg-primary/10 text-primary shrink-0">
                     Начать
                   </span>
                 </div>

@@ -87,40 +87,46 @@ export type Database = {
       }
       tasks: {
         Row: {
-          addr1: string
+          addr1: string | null
           addr2: string
           created_at: string
           created_by: string | null
           expires_at: string | null
           id: string
-          link: string
-          name: string
+          image_url: string | null
+          link: string | null
+          name: string | null
           status: string
           task_id: string
+          task_type: string
         }
         Insert: {
-          addr1: string
+          addr1?: string | null
           addr2: string
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
           id?: string
-          link: string
-          name: string
+          image_url?: string | null
+          link?: string | null
+          name?: string | null
           status?: string
           task_id: string
+          task_type?: string
         }
         Update: {
-          addr1?: string
+          addr1?: string | null
           addr2?: string
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
           id?: string
-          link?: string
-          name?: string
+          image_url?: string | null
+          link?: string | null
+          name?: string | null
           status?: string
           task_id?: string
+          task_type?: string
         }
         Relationships: []
       }

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle } from 'lucide-react';
+import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload } from 'lucide-react';
 
 interface CompletedTask {
   id: string;
@@ -102,6 +103,17 @@ export default function AdminDashboard() {
   const [historyUser, setHistoryUser] = useState<{ user_id: string; name: string } | null>(null);
   const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string }>>([]);
 
+  // Add task flow
+  const [showTypeSelect, setShowTypeSelect] = useState(false);
+  const [taskKind, setTaskKind] = useState<'text' | 'image' | null>(null);
+
+  // Image task state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageAddr, setImageAddr] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Timer selection state
   const [parsedTask, setParsedTask] = useState<ReturnType<typeof parseTaskText>>(null);
   const [showTimerSelect, setShowTimerSelect] = useState(false);
@@ -179,6 +191,66 @@ export default function AdminDashboard() {
     }
     loadCompletedTasks();
     toast({ title: 'Готово!' });
+  };
+
+  const openTypeSelect = () => {
+    setShowTypeSelect(true);
+  };
+
+  const chooseTaskKind = (kind: 'text' | 'image') => {
+    setTaskKind(kind);
+    setShowTypeSelect(false);
+    setShowAddTask(true);
+  };
+
+  const handleImagePick = (file: File | null) => {
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const submitImageTask = async () => {
+    if (!imageFile || !imageAddr.trim()) {
+      toast({ title: 'Ошибка', description: 'Загрузите картинку и укажите адрес доставки.', variant: 'destructive' });
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const ext = imageFile.name.split('.').pop() || 'jpg';
+      const path = `tasks/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('task-images').upload(path, imageFile, {
+        contentType: imageFile.type,
+        upsert: false,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('task-images').getPublicUrl(path);
+
+      const task_id = 'img_' + Date.now();
+      const { error } = await supabase.from('tasks').insert({
+        task_id,
+        name: 'Задание с картинкой',
+        addr1: '',
+        addr2: imageAddr.trim(),
+        link: '',
+        image_url: pub.publicUrl,
+        task_type: 'image',
+      });
+      if (error) throw error;
+
+      setImageFile(null);
+      setImagePreview(null);
+      setImageAddr('');
+      setTaskKind(null);
+      setShowAddTask(false);
+      loadAllTasks();
+      toast({ title: 'Задание с картинкой добавлено' });
+    } catch (e: any) {
+      toast({ title: 'Ошибка', description: e.message, variant: 'destructive' });
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleParseTask = () => {
@@ -294,7 +366,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowAddTask(true)} className="p-2 bg-accent/10 text-accent rounded-full">
+            <button onClick={openTypeSelect} className="p-2 bg-accent/10 text-accent rounded-full">
               <Plus size={24} />
             </button>
             <button onClick={signOut} className="p-2 bg-destructive/10 text-destructive rounded-full">
@@ -492,13 +564,47 @@ export default function AdminDashboard() {
         )}
       </main>
 
-      {/* Add Task Modal */}
-      {showAddTask && (
+      {/* Type Select Modal */}
+      {showTypeSelect && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setShowAddTask(false)} />
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setShowTypeSelect(false)} />
           <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-8 pb-12 animate-in slide-in-from-bottom">
             <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-6" />
-            <h2 className="text-xl font-black text-foreground mb-4">Добавить задание</h2>
+            <h2 className="text-xl font-black text-foreground mb-2">Какое задание создаём?</h2>
+            <p className="text-xs text-muted-foreground mb-6">Выберите тип нового задания</p>
+            <div className="space-y-3">
+              <button
+                onClick={() => chooseTaskKind('text')}
+                className="w-full p-5 rounded-2xl border-2 border-border hover:border-primary bg-card flex items-center gap-4 text-left transition-all"
+              >
+                <div className="p-3 bg-primary/10 rounded-2xl text-primary"><FileText size={24} /></div>
+                <div className="flex-1">
+                  <p className="font-black text-foreground text-sm uppercase">По тексту</p>
+                  <p className="text-[11px] text-muted-foreground font-bold">Вставка текста с адресами и ссылкой Яндекс.Еды</p>
+                </div>
+              </button>
+              <button
+                onClick={() => chooseTaskKind('image')}
+                className="w-full p-5 rounded-2xl border-2 border-border hover:border-accent bg-card flex items-center gap-4 text-left transition-all"
+              >
+                <div className="p-3 bg-accent/10 rounded-2xl text-accent"><ImageIcon size={24} /></div>
+                <div className="flex-1">
+                  <p className="font-black text-foreground text-sm uppercase">По картинке</p>
+                  <p className="text-[11px] text-muted-foreground font-bold">Загрузка скриншота и адреса доставки</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Task Modal */}
+      {showAddTask && taskKind === 'text' && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => { setShowAddTask(false); setTaskKind(null); }} />
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-8 pb-12 animate-in slide-in-from-bottom">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-6" />
+            <h2 className="text-xl font-black text-foreground mb-4">Задание по тексту</h2>
             <Textarea
               placeholder="Вставьте текст задания с адресами и ссылкой..."
               value={taskText}
@@ -507,6 +613,62 @@ export default function AdminDashboard() {
             />
             <Button onClick={handleParseTask} className="w-full font-black uppercase bg-accent text-accent-foreground hover:bg-accent/90 rounded-2xl h-14 text-base">
               Далее
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Image Task Modal */}
+      {showAddTask && taskKind === 'image' && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => { if (!uploadingImage) { setShowAddTask(false); setTaskKind(null); setImageFile(null); setImagePreview(null); setImageAddr(''); } }} />
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-8 pb-12 animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-6" />
+            <h2 className="text-xl font-black text-foreground mb-4">Задание по картинке</h2>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={e => handleImagePick(e.target.files?.[0] ?? null)}
+            />
+
+            {imagePreview ? (
+              <div className="mb-4 relative">
+                <img src={imagePreview} alt="превью" className="w-full rounded-2xl border border-border max-h-[40vh] object-contain bg-muted" />
+                <button
+                  onClick={() => { setImageFile(null); setImagePreview(null); }}
+                  className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-full"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full mb-4 border-2 border-dashed border-border rounded-2xl p-8 flex flex-col items-center gap-3 text-muted-foreground hover:border-accent hover:text-accent transition-all"
+              >
+                <Upload size={32} />
+                <span className="font-black uppercase text-xs">Загрузить картинку</span>
+                <span className="text-[10px] font-bold">JPG, PNG — вся информация на картинке</span>
+              </button>
+            )}
+
+            <label className="text-[10px] font-black text-accent uppercase tracking-widest mb-1 block">Адрес доставки</label>
+            <Input
+              value={imageAddr}
+              onChange={e => setImageAddr(e.target.value)}
+              placeholder="г. Москва, ул. ..."
+              className="mb-4 rounded-2xl h-12"
+            />
+
+            <Button
+              onClick={submitImageTask}
+              disabled={uploadingImage || !imageFile || !imageAddr.trim()}
+              className="w-full font-black uppercase bg-accent text-accent-foreground hover:bg-accent/90 rounded-2xl h-14 text-base"
+            >
+              {uploadingImage ? 'Загрузка...' : 'Добавить задание'}
             </Button>
           </div>
         </div>
