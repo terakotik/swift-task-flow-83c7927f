@@ -169,7 +169,7 @@ export default function AdminDashboard() {
   const loadCompletedTasks = async () => {
     const { data } = await supabase
       .from('completed_tasks')
-      .select('*, tasks(task_id, name)')
+      .select('*, tasks(task_id, name, task_type, image_url)')
       .order('created_at', { ascending: false });
 
     if (!data) { setCompletedTasks([]); return; }
