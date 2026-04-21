@@ -123,6 +123,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const [orderInput, setOrderInput] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [showInstruction, setShowInstruction] = useState(false);
   const [balance, setBalance] = useState(0);
   const [displayName, setDisplayName] = useState<string>('');
@@ -218,6 +219,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   };
 
   const finishTask = async () => {
+    if (submitting) return;
     if (!currentTask || orderInput.trim().length < 3) return;
     if (demoMode) {
       setCompletedIds(prev => new Set(prev).add(currentTask.id));
@@ -227,18 +229,26 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
       return;
     }
     if (!user) return;
+    setSubmitting(true);
     const { error } = await supabase.from('completed_tasks').insert({
       task_id: currentTask.id,
       user_id: user.id,
       order_number: orderInput.trim(),
     });
     if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      setSubmitting(false);
+      const isDup = error.code === '23505' || /duplicate|unique/i.test(error.message);
+      toast({
+        title: isDup ? 'Заявка уже отправлена' : 'Ошибка',
+        description: isDup ? 'Эта заявка по этому заказу уже на проверке.' : error.message,
+        variant: 'destructive',
+      });
       return;
     }
     setCompletedIds(prev => new Set(prev).add(currentTask.id));
     setCurrentTask(null);
     setOrderInput('');
+    setSubmitting(false);
     loadCompletedTasks();
     toast({ title: 'Задание отправлено на проверку!' });
   };
@@ -333,8 +343,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               placeholder="Введите номер заказа"
               className="mb-3"
             />
-            <Button onClick={finishTask} className="w-full font-black uppercase bg-foreground text-background hover:bg-foreground/90">
-              Завершить задание
+            <Button onClick={finishTask} disabled={submitting} className="w-full font-black uppercase bg-foreground text-background hover:bg-foreground/90 disabled:opacity-60">
+              {submitting ? 'Отправка...' : 'Завершить задание'}
             </Button>
           </div>
         </div>
