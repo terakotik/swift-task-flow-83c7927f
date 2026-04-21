@@ -15,7 +15,7 @@ interface CompletedTask {
   user_id: string;
   task_id: string;
   reject_reason?: string | null;
-  tasks: { task_id: string; name: string } | null;
+  tasks: { task_id: string; name: string; task_type?: string; image_url?: string | null } | null;
 }
 
 interface CompletedTaskWithProfile extends CompletedTask {
@@ -102,7 +102,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'pending' | 'done' | 'archive' | 'mytasks' | 'users'>('mytasks');
   const [taskExecutorCounts, setTaskExecutorCounts] = useState<Record<string, number>>({});
   const [historyUser, setHistoryUser] = useState<{ user_id: string; name: string } | null>(null);
-  const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string; status: string }>>([]);
+  const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string; status: string; task_type?: string; image_url?: string | null }>>([]);
 
   // Reject flow
   const [rejectTarget, setRejectTarget] = useState<CompletedTaskWithProfile | null>(null);
@@ -112,6 +112,7 @@ export default function AdminDashboard() {
     'Заказ не найден в системе',
     'Дубликат заявки',
     'Заказ оформлен не там',
+    'Отзыв не прошел',
   ];
 
   // Add task flow
@@ -168,7 +169,7 @@ export default function AdminDashboard() {
   const loadCompletedTasks = async () => {
     const { data } = await supabase
       .from('completed_tasks')
-      .select('*, tasks(task_id, name)')
+      .select('*, tasks(task_id, name, task_type, image_url)')
       .order('created_at', { ascending: false });
 
     if (!data) { setCompletedTasks([]); return; }
@@ -376,6 +377,8 @@ export default function AdminDashboard() {
         completed_at: (c as any).completed_at ?? c.created_at,
         task_name: c.tasks?.name ?? 'Задание',
         status: c.status,
+        task_type: c.tasks?.task_type ?? 'text',
+        image_url: c.tasks?.image_url ?? null,
       }));
     setHistoryItems(items);
     setHistoryUser({ user_id, name });
@@ -791,12 +794,23 @@ export default function AdminDashboard() {
               )}
               {historyItems.map((item, idx) => {
                 const { restaurant, street } = splitName(item.task_name);
+                const isImage = item.task_type === 'image';
                 return (
                     <div key={item.id} className="bg-muted rounded-xl p-3 flex justify-between items-center gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-xs font-black text-muted-foreground w-6 shrink-0">#{idx + 1}</span>
+                      {isImage && item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt="task"
+                          className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
+                        />
+                      ) : null}
                       <div className="min-w-0">
-                        <p className="text-xs font-black text-foreground uppercase truncate">{restaurant}</p>
+                        <p className="text-xs font-black text-foreground uppercase truncate flex items-center gap-1">
+                          {isImage && <span aria-label="картинка">🖼️</span>}
+                          <span className="truncate">{restaurant}</span>
+                        </p>
                         {street && <p className="text-[10px] text-muted-foreground font-bold truncate">{street}</p>}
                         <p className="text-[10px] text-muted-foreground font-bold">Заказ: {item.order_number}</p>
                       </div>
