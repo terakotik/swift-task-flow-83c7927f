@@ -143,18 +143,21 @@ export default function SuperAdmin() {
       toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
       return;
     }
-    if (Number(profile.balance) === 0) {
-      toast({ title: 'Баланс уже 0₽' });
+    const activeDone = doneCounts[profile.user_id] || 0;
+    if (Number(profile.balance) === 0 && activeDone === 0) {
+      toast({ title: 'Уже обнулено', description: 'Баланс 0₽ и нет заданий к выплате' });
       return;
     }
-    if (!confirm(`Провести выплату ${profile.display_name || profile.email || 'пользователя'} на сумму ${profile.balance}₽? Текущий баланс и счётчик закроются, а записи останутся в истории как выплаченные.`)) return;
+    const confirmMsg = Number(profile.balance) > 0
+      ? `Провести выплату ${profile.display_name || profile.email || 'пользователя'} на сумму ${profile.balance}₽? Текущий баланс и счётчик закроются, а записи останутся в истории как выплаченные.`
+      : `Баланс 0₽, но осталось ${activeDone} незакрытых заданий. Архивировать их как выплаченные?`;
+    if (!confirm(confirmMsg)) return;
     setAdjustingId(profile.user_id);
     const { error } = await supabase
       .from('profiles')
       .update({ balance: 0 })
       .eq('user_id', profile.user_id);
     if (!error) {
-      // Архивируем закрытые задания (done -> paid), чтобы счётчик и история обнулились
       await supabase
         .from('completed_tasks')
         .update({ status: 'paid' })
@@ -363,7 +366,7 @@ export default function SuperAdmin() {
                 <Button
                   size="sm"
                   className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs bg-accent text-accent-foreground hover:bg-accent/90"
-                  disabled={adjustingId === p.user_id || Number(p.balance) === 0}
+                  disabled={adjustingId === p.user_id || (Number(p.balance) === 0 && (doneCounts[p.user_id] || 0) === 0)}
                   onClick={() => resetBalance(p)}
                 >
                   <RotateCcw size={14} /> Выплата
