@@ -794,12 +794,23 @@ export default function AdminDashboard() {
               )}
               {historyItems.map((item, idx) => {
                 const { restaurant, street } = splitName(item.task_name);
+                const isImage = item.task_type === 'image';
                 return (
                     <div key={item.id} className="bg-muted rounded-xl p-3 flex justify-between items-center gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-xs font-black text-muted-foreground w-6 shrink-0">#{idx + 1}</span>
+                      {isImage && item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt="task"
+                          className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
+                        />
+                      ) : null}
                       <div className="min-w-0">
-                        <p className="text-xs font-black text-foreground uppercase truncate">{restaurant}</p>
+                        <p className="text-xs font-black text-foreground uppercase truncate flex items-center gap-1">
+                          {isImage && <span aria-label="картинка">🖼️</span>}
+                          <span className="truncate">{restaurant}</span>
+                        </p>
                         {street && <p className="text-[10px] text-muted-foreground font-bold truncate">{street}</p>}
                         <p className="text-[10px] text-muted-foreground font-bold">Заказ: {item.order_number}</p>
                       </div>
