@@ -102,7 +102,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'pending' | 'done' | 'archive' | 'mytasks' | 'users'>('mytasks');
   const [taskExecutorCounts, setTaskExecutorCounts] = useState<Record<string, number>>({});
   const [historyUser, setHistoryUser] = useState<{ user_id: string; name: string } | null>(null);
-  const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string; status: string }>>([]);
+  const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string; status: string; task_type?: string; image_url?: string | null }>>([]);
 
   // Reject flow
   const [rejectTarget, setRejectTarget] = useState<CompletedTaskWithProfile | null>(null);
@@ -112,6 +112,7 @@ export default function AdminDashboard() {
     'Заказ не найден в системе',
     'Дубликат заявки',
     'Заказ оформлен не там',
+    'Отзыв не прошел',
   ];
 
   // Add task flow
