@@ -366,7 +366,7 @@ export default function SuperAdmin() {
                 <Button
                   size="sm"
                   className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs bg-accent text-accent-foreground hover:bg-accent/90"
-                  disabled={adjustingId === p.user_id || Number(p.balance) === 0}
+                  disabled={adjustingId === p.user_id || (Number(p.balance) === 0 && (doneCounts[p.user_id] || 0) === 0)}
                   onClick={() => resetBalance(p)}
                 >
                   <RotateCcw size={14} /> Выплата
