@@ -377,6 +377,8 @@ export default function AdminDashboard() {
         completed_at: (c as any).completed_at ?? c.created_at,
         task_name: c.tasks?.name ?? 'Задание',
         status: c.status,
+        task_type: c.tasks?.task_type ?? 'text',
+        image_url: c.tasks?.image_url ?? null,
       }));
     setHistoryItems(items);
     setHistoryUser({ user_id, name });
