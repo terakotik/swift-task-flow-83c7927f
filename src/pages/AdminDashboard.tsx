@@ -15,7 +15,7 @@ interface CompletedTask {
   user_id: string;
   task_id: string;
   reject_reason?: string | null;
-  tasks: { task_id: string; name: string } | null;
+  tasks: { task_id: string; name: string; task_type?: string; image_url?: string | null } | null;
 }
 
 interface CompletedTaskWithProfile extends CompletedTask {
