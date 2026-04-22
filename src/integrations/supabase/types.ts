@@ -22,6 +22,7 @@ export type Database = {
           id: string
           order_number: string
           reject_reason: string | null
+          restaurant_tag: string | null
           status: string
           task_id: string
           user_id: string
@@ -33,6 +34,7 @@ export type Database = {
           id?: string
           order_number: string
           reject_reason?: string | null
+          restaurant_tag?: string | null
           status?: string
           task_id: string
           user_id: string
@@ -44,6 +46,7 @@ export type Database = {
           id?: string
           order_number?: string
           reject_reason?: string | null
+          restaurant_tag?: string | null
           status?: string
           task_id?: string
           user_id?: string
