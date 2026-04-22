@@ -351,7 +351,29 @@ export default function AdminDashboard() {
     toast({ title: 'Задание удалено' });
   };
 
-  const archivedTasks = allTasks.filter(t => t.status === 'archived');
+  const saveTag = async () => {
+    if (!tagTarget) return;
+    const value = tagInput.trim() || null;
+    const { error } = await supabase.from('tasks').update({ restaurant_tag: value }).eq('id', tagTarget.id);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setTagTarget(null);
+    setTagInput('');
+    loadAllTasks();
+    toast({ title: value ? `Метка «${value}» сохранена` : 'Метка удалена' });
+  };
+
+  const archivedTags = (() => {
+    const tags = new Set<string>();
+    allTasks.filter(t => t.status === 'archived' && t.restaurant_tag).forEach(t => tags.add(t.restaurant_tag!));
+    return Array.from(tags).sort();
+  })();
+
+  const archivedTasks = allTasks
+    .filter(t => t.status === 'archived')
+    .filter(t => archiveFilter === 'all' ? true : archiveFilter === '__none__' ? !t.restaurant_tag : t.restaurant_tag === archiveFilter);
   const activeTasks = allTasks.filter(t => t.status === 'available');
 
   // Aggregate done tasks per user (these reset to 'paid' after super-admin payout)
