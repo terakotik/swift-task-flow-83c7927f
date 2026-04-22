@@ -22,7 +22,6 @@ export type Database = {
           id: string
           order_number: string
           reject_reason: string | null
-          restaurant_tag: string | null
           status: string
           task_id: string
           user_id: string
@@ -34,7 +33,6 @@ export type Database = {
           id?: string
           order_number: string
           reject_reason?: string | null
-          restaurant_tag?: string | null
           status?: string
           task_id: string
           user_id: string
@@ -46,7 +44,6 @@ export type Database = {
           id?: string
           order_number?: string
           reject_reason?: string | null
-          restaurant_tag?: string | null
           status?: string
           task_id?: string
           user_id?: string
@@ -102,6 +99,7 @@ export type Database = {
           image_url: string | null
           link: string | null
           name: string | null
+          restaurant_tag: string | null
           status: string
           task_id: string
           task_type: string
@@ -116,6 +114,7 @@ export type Database = {
           image_url?: string | null
           link?: string | null
           name?: string | null
+          restaurant_tag?: string | null
           status?: string
           task_id: string
           task_type?: string
@@ -130,6 +129,7 @@ export type Database = {
           image_url?: string | null
           link?: string | null
           name?: string | null
+          restaurant_tag?: string | null
           status?: string
           task_id?: string
           task_type?: string
