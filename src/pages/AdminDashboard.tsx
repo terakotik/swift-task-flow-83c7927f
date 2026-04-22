@@ -554,6 +554,39 @@ export default function AdminDashboard() {
 
         {activeTab === 'archive' && (
           <>
+            {/* Filter chips by restaurant tag */}
+            {allTasks.some(t => t.status === 'archived') && (
+              <div className="bg-card p-3 rounded-2xl border border-border space-y-2">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Filter size={12} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Фильтр по метке</span>
+                </div>
+                <div className="flex gap-1.5 flex-wrap">
+                  <button
+                    onClick={() => setArchiveFilter('all')}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase ${archiveFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                  >
+                    Все
+                  </button>
+                  {archivedTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => setArchiveFilter(tag)}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase gap-1 inline-flex items-center ${archiveFilter === tag ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                    >
+                      <Tag size={10} /> {tag}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setArchiveFilter('__none__')}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase ${archiveFilter === '__none__' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                  >
+                    Без метки
+                  </button>
+                </div>
+              </div>
+            )}
+
             {archivedTasks.length === 0 && (
               <p className="text-center text-muted-foreground py-12">Архив пуст</p>
             )}
@@ -562,15 +595,27 @@ export default function AdminDashboard() {
               return (
                 <div key={task.id} className="bg-card p-5 rounded-2xl border border-border shadow-sm space-y-3">
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-black text-foreground text-sm uppercase">{restaurant}</h3>
                       {street && <p className="text-[10px] text-muted-foreground font-bold">{street}</p>}
+                      {task.restaurant_tag && (
+                        <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-accent/15 text-accent text-[10px] font-black uppercase">
+                          <Tag size={10} /> {task.restaurant_tag}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <Archive size={14} className="text-muted-foreground" />
                       <span className="text-[10px] font-black uppercase text-muted-foreground">Архив</span>
                     </div>
                   </div>
+                  <Button
+                    onClick={() => { setTagTarget(task); setTagInput(task.restaurant_tag ?? ''); }}
+                    variant="outline"
+                    className="w-full font-bold text-xs gap-2"
+                  >
+                    <Tag size={14} /> {task.restaurant_tag ? 'Изменить метку' : 'Добавить метку'}
+                  </Button>
                   <div className="flex gap-2">
                     <Button onClick={() => unarchiveTask(task.id)} variant="outline" className="flex-1 font-bold text-xs gap-2">
                       <RotateCcw size={14} /> Восстановить
