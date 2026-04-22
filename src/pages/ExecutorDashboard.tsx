@@ -79,6 +79,7 @@ const DEMO_TASKS: Task[] = [
     created_by: null,
     image_url: null,
     task_type: 'text',
+    restaurant_tag: null,
   },
   {
     id: 'demo-2',
@@ -93,6 +94,7 @@ const DEMO_TASKS: Task[] = [
     created_by: null,
     image_url: null,
     task_type: 'text',
+    restaurant_tag: null,
   },
   {
     id: 'demo-3',
@@ -107,6 +109,7 @@ const DEMO_TASKS: Task[] = [
     created_by: null,
     image_url: null,
     task_type: 'text',
+    restaurant_tag: null,
   },
 ];
 
