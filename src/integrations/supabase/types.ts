@@ -99,6 +99,7 @@ export type Database = {
           image_url: string | null
           link: string | null
           name: string | null
+          restaurant_tag: string | null
           status: string
           task_id: string
           task_type: string
@@ -113,6 +114,7 @@ export type Database = {
           image_url?: string | null
           link?: string | null
           name?: string | null
+          restaurant_tag?: string | null
           status?: string
           task_id: string
           task_type?: string
@@ -127,6 +129,7 @@ export type Database = {
           image_url?: string | null
           link?: string | null
           name?: string | null
+          restaurant_tag?: string | null
           status?: string
           task_id?: string
           task_type?: string

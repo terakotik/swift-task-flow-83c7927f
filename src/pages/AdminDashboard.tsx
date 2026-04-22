@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban } from 'lucide-react';
+import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban, Tag, Filter, Check } from 'lucide-react';
 
 interface CompletedTask {
   id: string;
@@ -29,6 +29,7 @@ interface TaskInfo {
   status: string;
   expires_at: string | null;
   created_at: string;
+  restaurant_tag?: string | null;
 }
 
 function parseTaskText(text: string): { name: string; addr1: string; addr2: string; link: string; task_id: string } | null {
@@ -131,6 +132,11 @@ export default function AdminDashboard() {
   const [showTimerSelect, setShowTimerSelect] = useState(false);
   const [selectedTimer, setSelectedTimer] = useState<'30' | '60' | 'none'>('none');
 
+  // Archive tagging
+  const [archiveFilter, setArchiveFilter] = useState<string>('all');
+  const [tagTarget, setTagTarget] = useState<TaskInfo | null>(null);
+  const [tagInput, setTagInput] = useState('');
+
   useEffect(() => {
     loadCompletedTasks();
     loadAllTasks();
@@ -142,7 +148,7 @@ export default function AdminDashboard() {
   const loadAllTasks = async () => {
     const { data } = await supabase
       .from('tasks')
-      .select('id, task_id, name, status, expires_at, created_at')
+      .select('id, task_id, name, status, expires_at, created_at, restaurant_tag')
       .order('created_at', { ascending: false });
     setAllTasks(data ?? []);
   };
@@ -345,7 +351,29 @@ export default function AdminDashboard() {
     toast({ title: 'Задание удалено' });
   };
 
-  const archivedTasks = allTasks.filter(t => t.status === 'archived');
+  const saveTag = async () => {
+    if (!tagTarget) return;
+    const value = tagInput.trim() || null;
+    const { error } = await supabase.from('tasks').update({ restaurant_tag: value }).eq('id', tagTarget.id);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setTagTarget(null);
+    setTagInput('');
+    loadAllTasks();
+    toast({ title: value ? `Метка «${value}» сохранена` : 'Метка удалена' });
+  };
+
+  const archivedTags = (() => {
+    const tags = new Set<string>();
+    allTasks.filter(t => t.status === 'archived' && t.restaurant_tag).forEach(t => tags.add(t.restaurant_tag!));
+    return Array.from(tags).sort();
+  })();
+
+  const archivedTasks = allTasks
+    .filter(t => t.status === 'archived')
+    .filter(t => archiveFilter === 'all' ? true : archiveFilter === '__none__' ? !t.restaurant_tag : t.restaurant_tag === archiveFilter);
   const activeTasks = allTasks.filter(t => t.status === 'available');
 
   // Aggregate done tasks per user (these reset to 'paid' after super-admin payout)
@@ -526,6 +554,39 @@ export default function AdminDashboard() {
 
         {activeTab === 'archive' && (
           <>
+            {/* Filter chips by restaurant tag */}
+            {allTasks.some(t => t.status === 'archived') && (
+              <div className="bg-card p-3 rounded-2xl border border-border space-y-2">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Filter size={12} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Фильтр по метке</span>
+                </div>
+                <div className="flex gap-1.5 flex-wrap">
+                  <button
+                    onClick={() => setArchiveFilter('all')}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase ${archiveFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                  >
+                    Все
+                  </button>
+                  {archivedTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => setArchiveFilter(tag)}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase gap-1 inline-flex items-center ${archiveFilter === tag ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                    >
+                      <Tag size={10} /> {tag}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setArchiveFilter('__none__')}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase ${archiveFilter === '__none__' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                  >
+                    Без метки
+                  </button>
+                </div>
+              </div>
+            )}
+
             {archivedTasks.length === 0 && (
               <p className="text-center text-muted-foreground py-12">Архив пуст</p>
             )}
@@ -534,15 +595,27 @@ export default function AdminDashboard() {
               return (
                 <div key={task.id} className="bg-card p-5 rounded-2xl border border-border shadow-sm space-y-3">
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-black text-foreground text-sm uppercase">{restaurant}</h3>
                       {street && <p className="text-[10px] text-muted-foreground font-bold">{street}</p>}
+                      {task.restaurant_tag && (
+                        <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-accent/15 text-accent text-[10px] font-black uppercase">
+                          <Tag size={10} /> {task.restaurant_tag}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <Archive size={14} className="text-muted-foreground" />
                       <span className="text-[10px] font-black uppercase text-muted-foreground">Архив</span>
                     </div>
                   </div>
+                  <Button
+                    onClick={() => { setTagTarget(task); setTagInput(task.restaurant_tag ?? ''); }}
+                    variant="outline"
+                    className="w-full font-bold text-xs gap-2"
+                  >
+                    <Tag size={14} /> {task.restaurant_tag ? 'Изменить метку' : 'Добавить метку'}
+                  </Button>
                   <div className="flex gap-2">
                     <Button onClick={() => unarchiveTask(task.id)} variant="outline" className="flex-1 font-bold text-xs gap-2">
                       <RotateCcw size={14} /> Восстановить
@@ -891,6 +964,73 @@ export default function AdminDashboard() {
                 className="flex-1 font-black uppercase rounded-2xl h-12 gap-2"
               >
                 <Ban size={16} /> Отклонить
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tag edit modal */}
+      {tagTarget && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => { setTagTarget(null); setTagInput(''); }} />
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-8 pb-12 animate-in slide-in-from-bottom">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-6" />
+            <div className="flex items-center gap-2 mb-2">
+              <Tag size={20} className="text-accent" />
+              <h2 className="text-xl font-black text-foreground">Метка ресторана</h2>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              Сгруппируйте задания одной меткой (например, «Таганка 1»), чтобы фильтровать архив.
+            </p>
+
+            {archivedTags.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">Существующие метки</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {archivedTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => setTagInput(tag)}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase gap-1 inline-flex items-center ${tagInput === tag ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}
+                    >
+                      <Tag size={10} /> {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Input
+              placeholder="Например: Таганка 1"
+              value={tagInput}
+              onChange={e => setTagInput(e.target.value)}
+              className="rounded-2xl h-12 mb-4"
+              autoFocus
+            />
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => { setTagTarget(null); setTagInput(''); }}
+                variant="outline"
+                className="flex-1 font-black uppercase rounded-2xl h-12"
+              >
+                Отмена
+              </Button>
+              {tagTarget.restaurant_tag && (
+                <Button
+                  onClick={() => { setTagInput(''); saveTag(); }}
+                  variant="destructive"
+                  className="font-black uppercase rounded-2xl h-12 px-4"
+                >
+                  Снять
+                </Button>
+              )}
+              <Button
+                onClick={saveTag}
+                className="flex-1 font-black uppercase rounded-2xl h-12 bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
+              >
+                <Check size={16} /> Сохранить
               </Button>
             </div>
           </div>
