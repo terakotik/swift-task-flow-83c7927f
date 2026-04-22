@@ -969,6 +969,73 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Tag edit modal */}
+      {tagTarget && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => { setTagTarget(null); setTagInput(''); }} />
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-8 pb-12 animate-in slide-in-from-bottom">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-6" />
+            <div className="flex items-center gap-2 mb-2">
+              <Tag size={20} className="text-accent" />
+              <h2 className="text-xl font-black text-foreground">Метка ресторана</h2>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              Сгруппируйте задания одной меткой (например, «Таганка 1»), чтобы фильтровать архив.
+            </p>
+
+            {archivedTags.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">Существующие метки</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {archivedTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => setTagInput(tag)}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase gap-1 inline-flex items-center ${tagInput === tag ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}
+                    >
+                      <Tag size={10} /> {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Input
+              placeholder="Например: Таганка 1"
+              value={tagInput}
+              onChange={e => setTagInput(e.target.value)}
+              className="rounded-2xl h-12 mb-4"
+              autoFocus
+            />
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => { setTagTarget(null); setTagInput(''); }}
+                variant="outline"
+                className="flex-1 font-black uppercase rounded-2xl h-12"
+              >
+                Отмена
+              </Button>
+              {tagTarget.restaurant_tag && (
+                <Button
+                  onClick={() => { setTagInput(''); saveTag(); }}
+                  variant="destructive"
+                  className="font-black uppercase rounded-2xl h-12 px-4"
+                >
+                  Снять
+                </Button>
+              )}
+              <Button
+                onClick={saveTag}
+                className="flex-1 font-black uppercase rounded-2xl h-12 bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
+              >
+                <Check size={16} /> Сохранить
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
