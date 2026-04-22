@@ -132,6 +132,11 @@ export default function AdminDashboard() {
   const [showTimerSelect, setShowTimerSelect] = useState(false);
   const [selectedTimer, setSelectedTimer] = useState<'30' | '60' | 'none'>('none');
 
+  // Archive tagging
+  const [archiveFilter, setArchiveFilter] = useState<string>('all');
+  const [tagTarget, setTagTarget] = useState<TaskInfo | null>(null);
+  const [tagInput, setTagInput] = useState('');
+
   useEffect(() => {
     loadCompletedTasks();
     loadAllTasks();
