@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban } from 'lucide-react';
+import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban, Tag, Filter, Check } from 'lucide-react';
 
 interface CompletedTask {
   id: string;
@@ -29,6 +29,7 @@ interface TaskInfo {
   status: string;
   expires_at: string | null;
   created_at: string;
+  restaurant_tag?: string | null;
 }
 
 function parseTaskText(text: string): { name: string; addr1: string; addr2: string; link: string; task_id: string } | null {
@@ -142,7 +143,7 @@ export default function AdminDashboard() {
   const loadAllTasks = async () => {
     const { data } = await supabase
       .from('tasks')
-      .select('id, task_id, name, status, expires_at, created_at')
+      .select('id, task_id, name, status, expires_at, created_at, restaurant_tag')
       .order('created_at', { ascending: false });
     setAllTasks(data ?? []);
   };
