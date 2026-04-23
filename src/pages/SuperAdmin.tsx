@@ -67,11 +67,12 @@ export default function SuperAdmin() {
   }, [isSuperAdmin]);
 
   const loadData = async () => {
-    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: doneData }] = await Promise.all([
+    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: doneData }, { data: completedAll }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
-      supabase.from('tasks').select('id, name, addr1, addr2, created_at, status').order('created_at', { ascending: false }),
+      supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
       supabase.from('completed_tasks').select('user_id').eq('status', 'done'),
+      supabase.from('completed_tasks').select('user_id, task_id, status').in('status', ['done', 'paid']),
     ]);
 
     if (profilesError || rolesError || tasksError) {
@@ -86,6 +87,21 @@ export default function SuperAdmin() {
     const counts: Record<string, number> = {};
     (doneData ?? []).forEach(d => { counts[d.user_id] = (counts[d.user_id] || 0) + 1; });
     setDoneCounts(counts);
+
+    // Подсчёт по офферам: задание с картинкой vs без
+    const taskTypeMap: Record<string, 'withImage' | 'noImage'> = {};
+    (tasksData ?? []).forEach((t: any) => {
+      const isImage = t.task_type === 'image' || !!t.image_url;
+      taskTypeMap[t.id] = isImage ? 'withImage' : 'noImage';
+    });
+    const stats: Record<string, { withImage: number; noImage: number }> = {};
+    (completedAll ?? []).forEach((c: any) => {
+      const kind = taskTypeMap[c.task_id];
+      if (!kind) return;
+      if (!stats[c.user_id]) stats[c.user_id] = { withImage: 0, noImage: 0 };
+      stats[c.user_id][kind] += 1;
+    });
+    setOfferStats(stats);
   };
 
   const openHistory = async (profile: UserProfile) => {
