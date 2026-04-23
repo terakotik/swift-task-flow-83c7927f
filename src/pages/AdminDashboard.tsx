@@ -346,13 +346,23 @@ export default function AdminDashboard() {
   };
 
   const deleteTask = async (taskId: string) => {
-    const { error: completedError } = await supabase
+    // Проверяем, есть ли по этому заданию выполнения пользователей
+    const { count, error: countError } = await supabase
       .from('completed_tasks')
-      .delete()
+      .select('id', { count: 'exact', head: true })
       .eq('task_id', taskId);
 
-    if (completedError) {
-      toast({ title: 'Ошибка удаления', description: completedError.message, variant: 'destructive' });
+    if (countError) {
+      toast({ title: 'Ошибка проверки', description: countError.message, variant: 'destructive' });
+      return;
+    }
+
+    if ((count ?? 0) > 0) {
+      toast({
+        title: 'Нельзя удалить',
+        description: `По этому заданию есть ${count} выполнений пользователей. История сохранена — задание просто остаётся в архиве.`,
+        variant: 'destructive',
+      });
       return;
     }
 
