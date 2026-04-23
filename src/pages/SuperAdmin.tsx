@@ -315,6 +315,111 @@ export default function SuperAdmin() {
           <p className="text-xs text-destructive font-semibold">Удаление выключено: аккаунту vt@admin.com не выдана роль admin.</p>
         )}
 
+        {/* Аналитика по офферам */}
+        {(() => {
+          const PRICE_IMAGE = 100;
+          const PRICE_TEXT = 70;
+          const eligible = profiles
+            .map(p => {
+              const s = offerStats[p.user_id] || { withImage: 0, noImage: 0 };
+              const total = s.withImage + s.noImage;
+              return { profile: p, withImage: s.withImage, noImage: s.noImage, total };
+            })
+            .filter(x => x.total >= 10)
+            .sort((a, b) => (b.withImage * PRICE_IMAGE + b.noImage * PRICE_TEXT) - (a.withImage * PRICE_IMAGE + a.noImage * PRICE_TEXT));
+
+          const totalImage = eligible.reduce((s, x) => s + x.withImage, 0);
+          const totalText = eligible.reduce((s, x) => s + x.noImage, 0);
+          const totalPayout = totalImage * PRICE_IMAGE + totalText * PRICE_TEXT;
+
+          return (
+            <section className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <BarChart3 size={18} className="text-primary" />
+                <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
+                  Аналитика по офферам
+                </h2>
+              </div>
+              <p className="text-[10px] text-muted-foreground font-bold">
+                Только пользователи с 10+ выполненными заданиями ({eligible.length}).
+                Цены: с картинкой — {PRICE_IMAGE}₽, без картинки — {PRICE_TEXT}₽.
+              </p>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-primary/10 rounded-xl p-2 text-center">
+                  <ImageIcon size={14} className="text-primary mx-auto mb-1" />
+                  <p className="text-base font-black text-primary">{totalImage}</p>
+                  <p className="text-[8px] font-black text-muted-foreground uppercase">С картинкой</p>
+                  <p className="text-[9px] font-black text-primary mt-0.5">{totalImage * PRICE_IMAGE}₽</p>
+                </div>
+                <div className="bg-muted rounded-xl p-2 text-center">
+                  <FileText size={14} className="text-foreground mx-auto mb-1" />
+                  <p className="text-base font-black text-foreground">{totalText}</p>
+                  <p className="text-[8px] font-black text-muted-foreground uppercase">Без картинки</p>
+                  <p className="text-[9px] font-black text-foreground mt-0.5">{totalText * PRICE_TEXT}₽</p>
+                </div>
+                <div className="bg-accent/10 rounded-xl p-2 text-center">
+                  <Wallet size={14} className="text-accent mx-auto mb-1" />
+                  <p className="text-base font-black text-accent">{totalPayout}₽</p>
+                  <p className="text-[8px] font-black text-muted-foreground uppercase">Итого</p>
+                  <p className="text-[9px] font-black text-accent mt-0.5">{totalImage + totalText} зад.</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                {eligible.length === 0 && (
+                  <p className="text-center text-muted-foreground text-xs py-2">
+                    Пока нет пользователей с 10+ заданиями
+                  </p>
+                )}
+                {eligible.map(({ profile, withImage, noImage, total }) => {
+                  const earned = withImage * PRICE_IMAGE + noImage * PRICE_TEXT;
+                  return (
+                    <div key={profile.user_id} className="bg-muted/50 rounded-xl p-3">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-foreground truncate">
+                            {profile.display_name || 'Без имени'}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground font-semibold truncate">
+                            {profile.email || '—'}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-base font-black text-accent">{earned}₽</p>
+                          <p className="text-[9px] font-black text-muted-foreground uppercase">
+                            всего: {total}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <div className="bg-primary/10 rounded-lg px-2 py-1.5 flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <ImageIcon size={11} className="text-primary" />
+                            <span className="text-[10px] font-black text-primary uppercase">Картинка</span>
+                          </div>
+                          <span className="text-[11px] font-black text-primary">
+                            {withImage} × {PRICE_IMAGE} = {withImage * PRICE_IMAGE}₽
+                          </span>
+                        </div>
+                        <div className="bg-foreground/5 rounded-lg px-2 py-1.5 flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <FileText size={11} className="text-foreground" />
+                            <span className="text-[10px] font-black text-foreground uppercase">Текст</span>
+                          </div>
+                          <span className="text-[11px] font-black text-foreground">
+                            {noImage} × {PRICE_TEXT} = {noImage * PRICE_TEXT}₽
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })()}
+
         {/* User list */}
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest pt-2">Все пользователи</h2>
         {profiles.map(p => {
