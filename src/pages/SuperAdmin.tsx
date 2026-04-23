@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle } from 'lucide-react';
+import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, BarChart3, Image as ImageIcon, FileText } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
 
@@ -53,6 +53,7 @@ export default function SuperAdmin() {
   const [adjustAmounts, setAdjustAmounts] = useState<Record<string, string>>({});
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
+  const [offerStats, setOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -66,11 +67,12 @@ export default function SuperAdmin() {
   }, [isSuperAdmin]);
 
   const loadData = async () => {
-    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: doneData }] = await Promise.all([
+    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: doneData }, { data: completedAll }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
-      supabase.from('tasks').select('id, name, addr1, addr2, created_at, status').order('created_at', { ascending: false }),
+      supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
       supabase.from('completed_tasks').select('user_id').eq('status', 'done'),
+      supabase.from('completed_tasks').select('user_id, task_id, status').in('status', ['done', 'paid']),
     ]);
 
     if (profilesError || rolesError || tasksError) {
@@ -85,6 +87,21 @@ export default function SuperAdmin() {
     const counts: Record<string, number> = {};
     (doneData ?? []).forEach(d => { counts[d.user_id] = (counts[d.user_id] || 0) + 1; });
     setDoneCounts(counts);
+
+    // Подсчёт по офферам: задание с картинкой vs без
+    const taskTypeMap: Record<string, 'withImage' | 'noImage'> = {};
+    (tasksData ?? []).forEach((t: any) => {
+      const isImage = t.task_type === 'image' || !!t.image_url;
+      taskTypeMap[t.id] = isImage ? 'withImage' : 'noImage';
+    });
+    const stats: Record<string, { withImage: number; noImage: number }> = {};
+    (completedAll ?? []).forEach((c: any) => {
+      const kind = taskTypeMap[c.task_id];
+      if (!kind) return;
+      if (!stats[c.user_id]) stats[c.user_id] = { withImage: 0, noImage: 0 };
+      stats[c.user_id][kind] += 1;
+    });
+    setOfferStats(stats);
   };
 
   const openHistory = async (profile: UserProfile) => {
@@ -297,6 +314,111 @@ export default function SuperAdmin() {
         {!canManageTasks && (
           <p className="text-xs text-destructive font-semibold">Удаление выключено: аккаунту vt@admin.com не выдана роль admin.</p>
         )}
+
+        {/* Аналитика по офферам */}
+        {(() => {
+          const PRICE_IMAGE = 100;
+          const PRICE_TEXT = 70;
+          const eligible = profiles
+            .map(p => {
+              const s = offerStats[p.user_id] || { withImage: 0, noImage: 0 };
+              const total = s.withImage + s.noImage;
+              return { profile: p, withImage: s.withImage, noImage: s.noImage, total };
+            })
+            .filter(x => x.total >= 10)
+            .sort((a, b) => (b.withImage * PRICE_IMAGE + b.noImage * PRICE_TEXT) - (a.withImage * PRICE_IMAGE + a.noImage * PRICE_TEXT));
+
+          const totalImage = eligible.reduce((s, x) => s + x.withImage, 0);
+          const totalText = eligible.reduce((s, x) => s + x.noImage, 0);
+          const totalPayout = totalImage * PRICE_IMAGE + totalText * PRICE_TEXT;
+
+          return (
+            <section className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <BarChart3 size={18} className="text-primary" />
+                <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
+                  Аналитика по офферам
+                </h2>
+              </div>
+              <p className="text-[10px] text-muted-foreground font-bold">
+                Только пользователи с 10+ выполненными заданиями ({eligible.length}).
+                Цены: с картинкой — {PRICE_IMAGE}₽, без картинки — {PRICE_TEXT}₽.
+              </p>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-primary/10 rounded-xl p-2 text-center">
+                  <ImageIcon size={14} className="text-primary mx-auto mb-1" />
+                  <p className="text-base font-black text-primary">{totalImage}</p>
+                  <p className="text-[8px] font-black text-muted-foreground uppercase">С картинкой</p>
+                  <p className="text-[9px] font-black text-primary mt-0.5">{totalImage * PRICE_IMAGE}₽</p>
+                </div>
+                <div className="bg-muted rounded-xl p-2 text-center">
+                  <FileText size={14} className="text-foreground mx-auto mb-1" />
+                  <p className="text-base font-black text-foreground">{totalText}</p>
+                  <p className="text-[8px] font-black text-muted-foreground uppercase">Без картинки</p>
+                  <p className="text-[9px] font-black text-foreground mt-0.5">{totalText * PRICE_TEXT}₽</p>
+                </div>
+                <div className="bg-accent/10 rounded-xl p-2 text-center">
+                  <Wallet size={14} className="text-accent mx-auto mb-1" />
+                  <p className="text-base font-black text-accent">{totalPayout}₽</p>
+                  <p className="text-[8px] font-black text-muted-foreground uppercase">Итого</p>
+                  <p className="text-[9px] font-black text-accent mt-0.5">{totalImage + totalText} зад.</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                {eligible.length === 0 && (
+                  <p className="text-center text-muted-foreground text-xs py-2">
+                    Пока нет пользователей с 10+ заданиями
+                  </p>
+                )}
+                {eligible.map(({ profile, withImage, noImage, total }) => {
+                  const earned = withImage * PRICE_IMAGE + noImage * PRICE_TEXT;
+                  return (
+                    <div key={profile.user_id} className="bg-muted/50 rounded-xl p-3">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-foreground truncate">
+                            {profile.display_name || 'Без имени'}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground font-semibold truncate">
+                            {profile.email || '—'}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-base font-black text-accent">{earned}₽</p>
+                          <p className="text-[9px] font-black text-muted-foreground uppercase">
+                            всего: {total}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <div className="bg-primary/10 rounded-lg px-2 py-1.5 flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <ImageIcon size={11} className="text-primary" />
+                            <span className="text-[10px] font-black text-primary uppercase">Картинка</span>
+                          </div>
+                          <span className="text-[11px] font-black text-primary">
+                            {withImage} × {PRICE_IMAGE} = {withImage * PRICE_IMAGE}₽
+                          </span>
+                        </div>
+                        <div className="bg-foreground/5 rounded-lg px-2 py-1.5 flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <FileText size={11} className="text-foreground" />
+                            <span className="text-[10px] font-black text-foreground uppercase">Текст</span>
+                          </div>
+                          <span className="text-[11px] font-black text-foreground">
+                            {noImage} × {PRICE_TEXT} = {noImage * PRICE_TEXT}₽
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })()}
 
         {/* User list */}
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest pt-2">Все пользователи</h2>
