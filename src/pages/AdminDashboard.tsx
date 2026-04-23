@@ -346,8 +346,29 @@ export default function AdminDashboard() {
   };
 
   const deleteTask = async (taskId: string) => {
-    await supabase.from('tasks').delete().eq('id', taskId);
+    const { error: completedError } = await supabase
+      .from('completed_tasks')
+      .delete()
+      .eq('task_id', taskId);
+
+    if (completedError) {
+      toast({ title: 'Ошибка удаления', description: completedError.message, variant: 'destructive' });
+      return;
+    }
+
+    const { error: taskError } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskId);
+
+    if (taskError) {
+      toast({ title: 'Ошибка удаления', description: taskError.message, variant: 'destructive' });
+      return;
+    }
+
+    loadCompletedTasks();
     loadAllTasks();
+    loadExecutorCounts();
     toast({ title: 'Задание удалено' });
   };
 
