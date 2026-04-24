@@ -423,7 +423,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
             >
               <div className="flex items-center gap-2">
                 <Gift size={20} />
-                <span className="text-xs font-black uppercase tracking-wider">Привести друга за 30₽</span>
+                <span className="text-xs font-black uppercase tracking-wider">Привести друга за деньги</span>
               </div>
               {referralStats.count > 0 && (
                 <span className="text-[10px] font-black bg-background/20 px-2 py-1 rounded-full">
@@ -650,10 +650,30 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               </button>
             </div>
 
-            <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl p-5 mb-4 text-center">
+            <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl p-5 mb-3 text-center">
               <Gift className="text-accent mx-auto mb-2" size={32} />
               <p className="text-3xl font-black text-foreground">+30₽</p>
               <p className="text-xs font-bold text-muted-foreground mt-1">за каждого друга после его первой выплаты</p>
+            </div>
+
+            {/* Постоянный буст ставки */}
+            <div className="bg-warning/10 border border-warning/30 rounded-2xl p-4 mb-4">
+              <p className="text-[10px] font-black text-warning uppercase tracking-widest mb-2">🔥 Бонус навсегда</p>
+              <div className="space-y-1.5 text-xs font-bold text-foreground">
+                <div className="flex justify-between">
+                  <span>1-й друг</span>
+                  <span className="text-accent">+3₽ к каждому заданию</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>2-й друг</span>
+                  <span className="text-accent">+2₽ к каждому заданию</span>
+                </div>
+                <div className="border-t border-warning/30 pt-1.5 mt-1.5 flex justify-between font-black">
+                  <span>Итого</span>
+                  <span className="text-warning">+5₽ к каждому заказу навсегда</span>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground font-medium mt-2">Система автоматического буста ставки скоро появится</p>
             </div>
 
             {referralCode && (
