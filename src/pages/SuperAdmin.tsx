@@ -528,7 +528,7 @@ export default function SuperAdmin() {
           const USER_IMAGE_PRICE = 30;
           const USER_TEXT_PRICE = 20;
 
-          const totals = Object.values(unpaidOfferStats).reduce(
+          const totals = eligiblePayoutUsers.reduce(
             (acc, stat) => ({
               withImage: acc.withImage + stat.withImage,
               noImage: acc.noImage + stat.noImage,
@@ -557,13 +557,17 @@ export default function SuperAdmin() {
                     {totals.withImage} × 100₽ + {totals.noImage} × 70₽
                   </p>
                 </div>
-                <div className="bg-accent/10 rounded-2xl p-3">
+                <button
+                  type="button"
+                  onClick={() => setIsPayoutDialogOpen(true)}
+                  className="bg-accent/10 rounded-2xl p-3 text-left transition-colors hover:bg-accent/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
                   <p className="text-[9px] font-black text-muted-foreground uppercase">Юзерам выплатить</p>
                   <p className="text-xl font-black text-accent mt-1">{userTotal}₽</p>
                   <p className="text-[10px] font-bold text-muted-foreground mt-1">
                     {totals.withImage} × 30₽ + {totals.noImage} × 20₽
                   </p>
-                </div>
+                </button>
               </div>
 
               <div className="bg-muted/50 rounded-2xl p-3 flex items-center justify-between gap-3">
@@ -573,6 +577,63 @@ export default function SuperAdmin() {
             </section>
           );
         })()}
+
+        <Dialog open={isPayoutDialogOpen} onOpenChange={setIsPayoutDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden rounded-2xl">
+            <DialogHeader>
+              <DialogTitle>Юзерам выплатить</DialogTitle>
+              <DialogDescription>
+                Показаны только пользователи, у которых 10 и более неоплаченных заданий.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ник</TableHead>
+                    <TableHead className="text-center">Скарт</TableHead>
+                    <TableHead className="text-center">Безкарт</TableHead>
+                    <TableHead className="text-right">Сумма к выплате</TableHead>
+                    <TableHead className="text-right">Действие</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {eligiblePayoutUsers.map(({ profile, withImage, noImage, payoutTotal }) => (
+                    <TableRow key={profile.user_id}>
+                      <TableCell>
+                        <div className="min-w-0">
+                          <p className="font-black text-foreground truncate">{profile.display_name || 'Без имени'}</p>
+                          <p className="text-xs text-muted-foreground truncate">{profile.email || '—'}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center font-black">{withImage}</TableCell>
+                      <TableCell className="text-center font-black">{noImage}</TableCell>
+                      <TableCell className="text-right font-black text-accent">{payoutTotal}₽</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          className="rounded-xl font-black uppercase text-xs bg-accent text-accent-foreground hover:bg-accent/90"
+                          disabled={adjustingId === profile.user_id}
+                          onClick={() => resetBalance(profile)}
+                        >
+                          Выплачено
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {eligiblePayoutUsers.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                        Нет пользователей с 10+ неоплаченными заданиями.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Журнал удалений / восстановление */}
         <section className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-3">
