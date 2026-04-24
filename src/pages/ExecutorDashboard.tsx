@@ -134,6 +134,9 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const [myCompleted, setMyCompleted] = useState<CompletedTaskWithDetails[]>([]);
   const [activeTab, setActiveTab] = useState<'available' | 'history'>('available');
   const [showSettings, setShowSettings] = useState(false);
+  const [showReferral, setShowReferral] = useState(false);
+  const [referralCode, setReferralCode] = useState<string>('');
+  const [referralStats, setReferralStats] = useState<{ count: number; earned: number }>({ count: 0, earned: 0 });
 
   useEffect(() => {
     if (!demoMode) return;
