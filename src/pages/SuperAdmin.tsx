@@ -4,6 +4,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, Archive, Undo2, Wrench } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
@@ -71,6 +79,7 @@ export default function SuperAdmin() {
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
   const [unpaidOfferStats, setUnpaidOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
+  const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -399,6 +408,23 @@ export default function SuperAdmin() {
       description: `Создано: ${inserted?.length ?? orders.length}. ${mrStatus === 'done' ? `+${sumDelta}₽ на баланс.` : 'Статус paid (без изменения баланса).'}`,
     });
   };
+
+  const eligiblePayoutUsers = profiles
+    .map(profile => {
+      const stat = unpaidOfferStats[profile.user_id] || { withImage: 0, noImage: 0 };
+      const totalTasks = stat.withImage + stat.noImage;
+      const payoutTotal = stat.withImage * 30 + stat.noImage * 20;
+
+      return {
+        profile,
+        withImage: stat.withImage,
+        noImage: stat.noImage,
+        totalTasks,
+        payoutTotal,
+      };
+    })
+    .filter(item => item.totalTasks >= 10)
+    .sort((a, b) => b.payoutTotal - a.payoutTotal);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
