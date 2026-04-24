@@ -142,6 +142,47 @@ export type Database = {
         }
         Relationships: []
       }
+      order_issue_reports: {
+        Row: {
+          created_at: string
+          id: string
+          problem_type: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          problem_type: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          problem_type?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_issue_reports_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           balance: number

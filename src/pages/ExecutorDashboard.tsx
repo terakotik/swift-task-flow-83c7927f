@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon, XCircle, Gift, Users, Share2 } from 'lucide-react';
+import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon, XCircle, Gift, Users, Share2, AlertTriangle } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Task = Tables<'tasks'>;
@@ -137,6 +137,9 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const [showReferral, setShowReferral] = useState(false);
   const [referralCode, setReferralCode] = useState<string>('');
   const [referralStats, setReferralStats] = useState<{ count: number; earned: number }>({ count: 0, earned: 0 });
+  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [selectedIssue, setSelectedIssue] = useState<'Нет соуса' | 'Нет налички' | 'Платная доставка' | ''>('');
+  const [sendingIssue, setSendingIssue] = useState(false);
 
   useEffect(() => {
     if (!demoMode) return;
@@ -271,6 +274,28 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
     toast({ title: 'Задание отправлено на проверку!' });
   };
 
+  const submitIssueReport = async () => {
+    if (!currentTask || !selectedIssue || !user || sendingIssue) return;
+
+    setSendingIssue(true);
+    const { error } = await (supabase as any).from('order_issue_reports').insert({
+      user_id: user.id,
+      task_id: currentTask.id,
+      problem_type: selectedIssue,
+    });
+
+    setSendingIssue(false);
+
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    setShowIssueModal(false);
+    setSelectedIssue('');
+    toast({ title: 'Проблема отправлена админу' });
+  };
+
   const availableTasks = tasks.filter(t => !completedIds.has(t.id));
 
   const statusLabel = (s: string) => {
@@ -355,6 +380,17 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
             </>
           )}
           <div className="pt-4 border-t border-border">
+            {!demoMode && user && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowIssueModal(true)}
+                className="mb-3 w-full font-black uppercase gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <AlertTriangle size={16} />
+                Проблема с заказом
+              </Button>
+            )}
             <Input
               value={orderInput}
               onChange={e => setOrderInput(e.target.value)}
@@ -366,6 +402,50 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
             </Button>
           </div>
         </div>
+
+        {showIssueModal && !demoMode && user && (
+          <div className="fixed inset-0 z-[70]">
+            <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setShowIssueModal(false)} />
+            <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-md rounded-t-[32px] bg-card p-6 pb-8 shadow-lg animate-in slide-in-from-bottom">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-destructive">Проблема с заказом</p>
+                  <h3 className="text-lg font-black text-foreground">Выберите вариант</h3>
+                </div>
+                <button onClick={() => setShowIssueModal(false)} className="rounded-full bg-muted p-2 text-foreground">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {(['Нет соуса', 'Нет налички', 'Платная доставка'] as const).map((issue) => {
+                  const active = selectedIssue === issue;
+                  return (
+                    <button
+                      key={issue}
+                      type="button"
+                      onClick={() => setSelectedIssue(issue)}
+                      className={`w-full rounded-2xl border px-4 py-4 text-left text-sm font-black transition-colors ${
+                        active ? 'border-primary bg-primary/10 text-foreground' : 'border-border bg-card text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {issue}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <Button
+                type="button"
+                onClick={submitIssueReport}
+                disabled={!selectedIssue || sendingIssue}
+                className="mt-5 w-full font-black uppercase"
+              >
+                {sendingIssue ? 'Отправка...' : 'Отправить'}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
