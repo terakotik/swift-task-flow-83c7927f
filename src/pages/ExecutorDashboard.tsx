@@ -641,101 +641,107 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
       {showReferral && !demoMode && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setShowReferral(false)} />
-          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-8 pb-12 animate-in slide-in-from-bottom max-w-md mx-auto">
-            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-6" />
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-black text-foreground">Привести друга</h2>
-              <button onClick={() => setShowReferral(false)} className="p-2 bg-muted rounded-full">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl p-5 mb-3 text-center">
-              <Gift className="text-accent mx-auto mb-2" size={32} />
-              <p className="text-3xl font-black text-foreground">+30₽</p>
-              <p className="text-xs font-bold text-muted-foreground mt-1">за каждого друга после его первой выплаты</p>
-            </div>
-
-            {/* Постоянный буст ставки */}
-            <div className="bg-warning/10 border border-warning/30 rounded-2xl p-4 mb-4">
-              <p className="text-[10px] font-black text-warning uppercase tracking-widest mb-2">🔥 Бонус навсегда</p>
-              <div className="space-y-1.5 text-xs font-bold text-foreground">
-                <div className="flex justify-between">
-                  <span>1-й друг</span>
-                  <span className="text-accent">+3₽ к каждому заданию</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>2-й друг</span>
-                  <span className="text-accent">+2₽ к каждому заданию</span>
-                </div>
-                <div className="border-t border-warning/30 pt-1.5 mt-1.5 flex justify-between font-black">
-                  <span>Итого</span>
-                  <span className="text-warning">+5₽ к каждому заказу навсегда</span>
-                </div>
-              </div>
-              <p className="text-[10px] text-muted-foreground font-medium mt-2">Система автоматического буста ставки скоро появится</p>
-            </div>
-
-            {referralCode && (
-              <>
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">Ваша ссылка</p>
-                <div className="bg-muted/50 rounded-2xl p-3 flex items-center gap-2 mb-3">
-                  <span className="flex-1 text-xs font-mono font-bold text-foreground break-all">
-                    {window.location.origin}/uzero?ref={referralCode}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  <Button
-                    onClick={() => copyText(`${window.location.origin}/uzero?ref=${referralCode}`)}
-                    className="font-black uppercase bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-xs"
-                  >
-                    <CopyIcon size={16} className="mr-1" />
-                    Скопировать
-                  </Button>
-                  <Button
-                    onClick={async () => {
-                      const url = `${window.location.origin}/uzero?ref=${referralCode}`;
-                      const text = `Подключайся ко мне в команду — получишь задания за деньги: ${url}`;
-                      if (navigator.share) {
-                        try {
-                          await navigator.share({ title: 'Привет!', text, url });
-                        } catch {}
-                      } else {
-                        copyText(text);
-                      }
-                    }}
-                    className="font-black uppercase bg-accent text-accent-foreground hover:bg-accent/90 h-12 text-xs"
-                  >
-                    <Share2 size={16} className="mr-1" />
-                    Поделиться
-                  </Button>
-                </div>
-
-                <div className="bg-muted/50 rounded-2xl p-4 mb-4">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Ваш код</p>
-                  <p className="text-2xl font-black tracking-widest text-foreground">{referralCode}</p>
-                </div>
-              </>
-            )}
-
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <div className="bg-accent/10 rounded-2xl p-4 text-center">
-                <Users className="text-accent mx-auto mb-1" size={20} />
-                <p className="text-2xl font-black text-accent">{referralStats.count}</p>
-                <p className="text-[9px] font-black text-muted-foreground uppercase">Друзей</p>
-              </div>
-              <div className="bg-primary/10 rounded-2xl p-4 text-center">
-                <Wallet className="text-primary mx-auto mb-1" size={20} />
-                <p className="text-2xl font-black text-primary">{referralStats.earned}₽</p>
-                <p className="text-[9px] font-black text-muted-foreground uppercase">Заработано</p>
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] animate-in slide-in-from-bottom max-w-md mx-auto flex flex-col max-h-[90vh]">
+            {/* Sticky header */}
+            <div className="px-8 pt-6 pb-4 shrink-0">
+              <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-4" />
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-black text-foreground">Привести друга</h2>
+                <button onClick={() => setShowReferral(false)} className="p-2 bg-muted rounded-full">
+                  <X size={20} />
+                </button>
               </div>
             </div>
 
-            <div className="text-[11px] text-muted-foreground font-medium space-y-1.5 px-1">
-              <p>1. Поделитесь ссылкой с другом</p>
-              <p>2. Друг регистрируется по вашей ссылке</p>
-              <p>3. Когда друг получит первую выплату — вам автоматически зачислится 30₽</p>
+            {/* Scrollable content */}
+            <div className="px-8 pb-12 overflow-y-auto overscroll-contain">
+              <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl p-5 mb-4 text-center">
+                <Gift className="text-accent mx-auto mb-2" size={32} />
+                <p className="text-3xl font-black text-foreground">+30₽</p>
+                <p className="text-xs font-bold text-muted-foreground mt-1">за каждого друга после его первой выплаты</p>
+              </div>
+
+              {referralCode && (
+                <>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">Ваша ссылка</p>
+                  <div className="bg-muted/50 rounded-2xl p-3 flex items-center gap-2 mb-3">
+                    <span className="flex-1 text-xs font-mono font-bold text-foreground break-all">
+                      {window.location.origin}/uzero?ref={referralCode}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <Button
+                      onClick={() => copyText(`${window.location.origin}/uzero?ref=${referralCode}`)}
+                      className="font-black uppercase bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-xs"
+                    >
+                      <CopyIcon size={16} className="mr-1" />
+                      Скопировать
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        const url = `${window.location.origin}/uzero?ref=${referralCode}`;
+                        const text = `Подключайся ко мне в команду — получишь задания за деньги: ${url}`;
+                        if (navigator.share) {
+                          try {
+                            await navigator.share({ title: 'Привет!', text, url });
+                          } catch {}
+                        } else {
+                          copyText(text);
+                        }
+                      }}
+                      className="font-black uppercase bg-accent text-accent-foreground hover:bg-accent/90 h-12 text-xs"
+                    >
+                      <Share2 size={16} className="mr-1" />
+                      Поделиться
+                    </Button>
+                  </div>
+
+                  <div className="bg-muted/50 rounded-2xl p-4 mb-4">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Ваш код</p>
+                    <p className="text-2xl font-black tracking-widest text-foreground">{referralCode}</p>
+                  </div>
+                </>
+              )}
+
+              {/* Постоянный буст ставки — под кодом */}
+              <div className="bg-warning/10 border border-warning/30 rounded-2xl p-4 mb-4">
+                <p className="text-[10px] font-black text-warning uppercase tracking-widest mb-2">🔥 Бонус навсегда</p>
+                <div className="space-y-1.5 text-xs font-bold text-foreground">
+                  <div className="flex justify-between gap-2">
+                    <span>1-й друг</span>
+                    <span className="text-accent text-right">+3₽ к каждому заданию</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span>2-й друг</span>
+                    <span className="text-accent text-right">+2₽ к каждому заданию</span>
+                  </div>
+                  <div className="border-t border-warning/30 pt-1.5 mt-1.5 flex justify-between gap-2 font-black">
+                    <span>Итого</span>
+                    <span className="text-warning text-right">+5₽ к каждому заказу навсегда</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground font-medium mt-2">Система автоматического буста ставки скоро появится</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="bg-accent/10 rounded-2xl p-4 text-center">
+                  <Users className="text-accent mx-auto mb-1" size={20} />
+                  <p className="text-2xl font-black text-accent">{referralStats.count}</p>
+                  <p className="text-[9px] font-black text-muted-foreground uppercase">Друзей</p>
+                </div>
+                <div className="bg-primary/10 rounded-2xl p-4 text-center">
+                  <Wallet className="text-primary mx-auto mb-1" size={20} />
+                  <p className="text-2xl font-black text-primary">{referralStats.earned}₽</p>
+                  <p className="text-[9px] font-black text-muted-foreground uppercase">Заработано</p>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-muted-foreground font-medium space-y-1.5 px-1">
+                <p>1. Поделитесь ссылкой с другом</p>
+                <p>2. Друг регистрируется по вашей ссылке</p>
+                <p>3. Когда друг получит первую выплату — вам автоматически зачислится 30₽</p>
+              </div>
             </div>
           </div>
         </div>
