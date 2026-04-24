@@ -505,6 +505,81 @@ export default function SuperAdmin() {
           );
         })()}
 
+        {/* Журнал удалений / восстановление */}
+        <section className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Archive size={18} className="text-warning" />
+            <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
+              Журнал удалений
+            </h2>
+          </div>
+          <p className="text-[10px] text-muted-foreground font-bold">
+            Все строки, удалённые из архива выполненных заданий. Можно восстановить за выбранную дату.
+          </p>
+          <div className="flex gap-2 items-center">
+            <Input
+              type="date"
+              value={logDate}
+              onChange={e => setLogDate(e.target.value)}
+              className="h-9 text-sm flex-1"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 rounded-xl px-3"
+              onClick={loadDeletedLog}
+              disabled={logLoading}
+            >
+              <RefreshCw size={14} />
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            {logLoading && (
+              <p className="text-center text-muted-foreground text-xs py-4">Загрузка...</p>
+            )}
+            {!logLoading && deletedLog.length === 0 && (
+              <p className="text-center text-muted-foreground text-xs py-4">
+                За {new Date(logDate).toLocaleDateString('ru-RU')} удалений не было
+              </p>
+            )}
+            {deletedLog.map(row => {
+              const owner = profiles.find(p => p.user_id === row.user_id);
+              return (
+                <div key={row.id} className="bg-muted/50 rounded-xl p-3">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-black text-foreground truncate">
+                        {owner?.display_name || owner?.email || row.user_id.slice(0, 8)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-bold">
+                        Заказ №{row.order_number} • статус: {row.status}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground">
+                        Удалено: {new Date(row.deleted_at).toLocaleString('ru-RU')}
+                      </p>
+                    </div>
+                    {row.restored ? (
+                      <span className="text-[9px] font-black px-2 py-1 rounded-full bg-accent/10 text-accent uppercase shrink-0">
+                        Восст.
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="h-8 rounded-xl gap-1 font-black uppercase text-[10px] bg-accent text-accent-foreground hover:bg-accent/90 shrink-0"
+                        onClick={() => restoreDeleted(row)}
+                        disabled={restoringId === row.id}
+                      >
+                        <Undo2 size={12} /> Вернуть
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
         {/* User list */}
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest pt-2">Все пользователи</h2>
         {profiles.map(p => {
