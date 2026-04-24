@@ -655,10 +655,32 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
 
             {/* Scrollable content */}
             <div className="px-8 pb-12 overflow-y-auto overscroll-contain">
-              <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl p-5 mb-4 text-center">
-                <Gift className="text-accent mx-auto mb-2" size={32} />
-                <p className="text-3xl font-black text-foreground">+30₽</p>
-                <p className="text-xs font-bold text-muted-foreground mt-1">за каждого друга после его первой выплаты</p>
+              {/* Постоянный буст ставки — главный акцент, наверху */}
+              <div className="bg-warning/10 border border-warning/30 rounded-2xl p-4 mb-4">
+                <p className="text-[10px] font-black text-warning uppercase tracking-widest mb-2">🔥 Бонус навсегда</p>
+                <div className="space-y-1.5 text-xs font-bold text-foreground">
+                  <div className="flex justify-between gap-2">
+                    <span>1-й друг</span>
+                    <span className="text-accent text-right">+3₽ к каждому заданию</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span>2-й друг</span>
+                    <span className="text-accent text-right">+2₽ к каждому заданию</span>
+                  </div>
+                  <div className="border-t border-warning/30 pt-1.5 mt-1.5 flex justify-between gap-2 font-black">
+                    <span>Итого</span>
+                    <span className="text-warning text-right">+5₽ к каждому заказу навсегда</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Разовый бонус — компактнее, без акцента */}
+              <div className="bg-muted/40 rounded-xl p-3 mb-4 flex items-center gap-3">
+                <Gift className="text-muted-foreground shrink-0" size={18} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-foreground">+30₽ за друга</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">Разово, после первой выплаты друга</p>
+                </div>
               </div>
 
               {referralCode && (
@@ -703,26 +725,6 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                   </div>
                 </>
               )}
-
-              {/* Постоянный буст ставки — под кодом */}
-              <div className="bg-warning/10 border border-warning/30 rounded-2xl p-4 mb-4">
-                <p className="text-[10px] font-black text-warning uppercase tracking-widest mb-2">🔥 Бонус навсегда</p>
-                <div className="space-y-1.5 text-xs font-bold text-foreground">
-                  <div className="flex justify-between gap-2">
-                    <span>1-й друг</span>
-                    <span className="text-accent text-right">+3₽ к каждому заданию</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span>2-й друг</span>
-                    <span className="text-accent text-right">+2₽ к каждому заданию</span>
-                  </div>
-                  <div className="border-t border-warning/30 pt-1.5 mt-1.5 flex justify-between gap-2 font-black">
-                    <span>Итого</span>
-                    <span className="text-warning text-right">+5₽ к каждому заказу навсегда</span>
-                  </div>
-                </div>
-                <p className="text-[10px] text-muted-foreground font-medium mt-2">Система автоматического буста ставки скоро появится</p>
-              </div>
 
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <div className="bg-accent/10 rounded-2xl p-4 text-center">
