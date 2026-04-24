@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, BarChart3, Image as ImageIcon, FileText, Archive, Undo2 } from 'lucide-react';
+import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, BarChart3, Image as ImageIcon, FileText, Archive, Undo2, Wrench, Download } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
 
@@ -78,6 +78,13 @@ export default function SuperAdmin() {
   const [logDate, setLogDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [logLoading, setLogLoading] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  // Manual restore form state
+  const [mrUserId, setMrUserId] = useState<string>('');
+  const [mrTaskId, setMrTaskId] = useState<string>('');
+  const [mrStatus, setMrStatus] = useState<'done' | 'paid'>('done');
+  const [mrPrice, setMrPrice] = useState<string>('20');
+  const [mrOrders, setMrOrders] = useState<string>('');
+  const [mrBusy, setMrBusy] = useState(false);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
@@ -306,6 +313,128 @@ export default function SuperAdmin() {
       description: `${profile.display_name || profile.email || 'Пользователь'} • новый баланс ${newBalance}₽`,
     });
   };
+
+  const manualRestore = async () => {
+    if (!isAdmin && !currentUserIsAdmin) {
+      toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
+      return;
+    }
+    if (!mrUserId) {
+      toast({ title: 'Выберите пользователя', variant: 'destructive' });
+      return;
+    }
+    if (!mrTaskId) {
+      toast({ title: 'Выберите задание', variant: 'destructive' });
+      return;
+    }
+    const orders = mrOrders
+      .split(/[\s,;\n\r\t]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (orders.length === 0) {
+      toast({ title: 'Введите хотя бы один номер заказа', variant: 'destructive' });
+      return;
+    }
+    const price = Math.max(0, Number(mrPrice) || 0);
+    const profile = profiles.find(p => p.user_id === mrUserId);
+    if (!profile) {
+      toast({ title: 'Пользователь не найден', variant: 'destructive' });
+      return;
+    }
+    const sumDelta = mrStatus === 'done' ? price * orders.length : 0;
+    const confirmMsg =
+      `Создать ${orders.length} запис${orders.length === 1 ? 'ь' : 'и/ей'} со статусом "${mrStatus}" для ${profile.email}.` +
+      (mrStatus === 'done' ? ` Баланс будет увеличен на ${sumDelta}₽.` : ' Баланс не изменится (статус paid).');
+    if (!confirm(confirmMsg)) return;
+
+    setMrBusy(true);
+    const nowIso = new Date().toISOString();
+    const rows = orders.map(order_number => ({
+      task_id: mrTaskId,
+      user_id: mrUserId,
+      order_number,
+      status: mrStatus,
+      accepted_at: nowIso,
+      completed_at: nowIso,
+    }));
+    const { data: inserted, error } = await supabase
+      .from('completed_tasks')
+      .insert(rows)
+      .select('id');
+    if (error) {
+      setMrBusy(false);
+      toast({ title: 'Ошибка вставки', description: error.message, variant: 'destructive' });
+      return;
+    }
+    if (mrStatus === 'done' && sumDelta > 0) {
+      const newBalance = Number(profile.balance) + sumDelta;
+      const { error: balErr } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('user_id', mrUserId);
+      if (balErr) {
+        setMrBusy(false);
+        toast({
+          title: 'Записи созданы, но баланс не обновлён',
+          description: balErr.message,
+          variant: 'destructive',
+        });
+        await loadData();
+        return;
+      }
+    }
+    setMrBusy(false);
+    setMrOrders('');
+    await loadData();
+    toast({
+      title: 'Восстановлено',
+      description: `Создано: ${inserted?.length ?? orders.length}. ${mrStatus === 'done' ? `+${sumDelta}₽ на баланс.` : 'Статус paid (без изменения баланса).'}`,
+    });
+  };
+
+  const exportDiscrepancies = () => {
+    const PRICE_IMAGE = 100;
+    const PRICE_TEXT = 70;
+    const lines = [
+      'email,display_name,current_balance,done_now,paid_now,total_now,expected_balance_done_only,diff(expected-current)',
+    ];
+    profiles.forEach(p => {
+      const stats = offerStats[p.user_id] || { withImage: 0, noImage: 0 };
+      const totalDoneAndPaid = stats.withImage + stats.noImage;
+      const doneOnly = doneCounts[p.user_id] || 0;
+      const paidOnly = Math.max(0, totalDoneAndPaid - doneOnly);
+      // ожидаемый баланс по done × средняя цена не известен точно; считаем по 20₽ как fallback и по миксу офферов
+      const expectedByMix = Math.round(
+        (stats.withImage * PRICE_IMAGE + stats.noImage * PRICE_TEXT) *
+          (doneOnly / Math.max(1, totalDoneAndPaid))
+      );
+      const diff = expectedByMix - Number(p.balance);
+      const safe = (s: any) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+      lines.push(
+        [
+          safe(p.email),
+          safe(p.display_name),
+          p.balance,
+          doneOnly,
+          paidOnly,
+          totalDoneAndPaid,
+          expectedByMix,
+          diff,
+        ].join(',')
+      );
+    });
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `balance-discrepancies-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: 'CSV выгружен', description: 'Сравнение балансов сохранено' });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -579,6 +708,113 @@ export default function SuperAdmin() {
             })}
           </div>
         </section>
+
+        {/* Ручное восстановление completed_tasks */}
+        <section className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Wrench size={18} className="text-primary" />
+            <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
+              Ручное восстановление
+            </h2>
+          </div>
+          <p className="text-[10px] text-muted-foreground font-bold">
+            Создаёт записи completed_tasks по списку номеров заказов. Если статус «done» — баланс пересчитается автоматически (price × количество). Если «paid» — без изменения баланса.
+          </p>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Пользователь</label>
+            <select
+              value={mrUserId}
+              onChange={e => setMrUserId(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">— выберите пользователя —</option>
+              {profiles.map(p => (
+                <option key={p.user_id} value={p.user_id}>
+                  {p.email || p.display_name || p.user_id.slice(0, 8)} • {p.balance}₽
+                </option>
+              ))}
+            </select>
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Задание (привязка)</label>
+            <select
+              value={mrTaskId}
+              onChange={e => setMrTaskId(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">— выберите задание —</option>
+              {tasks.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({t.addr1 || '—'})
+                </option>
+              ))}
+            </select>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-black uppercase text-muted-foreground">Статус</label>
+                <select
+                  value={mrStatus}
+                  onChange={e => setMrStatus(e.target.value as 'done' | 'paid')}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="done">done (к выплате, +баланс)</option>
+                  <option value="paid">paid (уже выплачено)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-muted-foreground">Цена за 1, ₽</label>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  value={mrPrice}
+                  onChange={e => setMrPrice(e.target.value)}
+                  className="h-10 text-sm"
+                />
+              </div>
+            </div>
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">
+              Номера заказов (через запятую, пробел или новую строку)
+            </label>
+            <textarea
+              value={mrOrders}
+              onChange={e => setMrOrders(e.target.value)}
+              rows={4}
+              placeholder="260421-001, 260421-002, 260421-003"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
+            {(() => {
+              const count = mrOrders.split(/[\s,;\n\r\t]+/).filter(Boolean).length;
+              const sum = mrStatus === 'done' ? count * (Number(mrPrice) || 0) : 0;
+              return (
+                <p className="text-[11px] font-bold text-muted-foreground">
+                  Будет создано: <span className="text-foreground">{count}</span>
+                  {mrStatus === 'done' && (
+                    <> • Баланс +<span className="text-accent">{sum}₽</span></>
+                  )}
+                </p>
+              );
+            })()}
+
+            <Button
+              onClick={manualRestore}
+              disabled={mrBusy}
+              className="w-full font-black uppercase rounded-2xl h-11 gap-2"
+            >
+              <Undo2 size={16} /> {mrBusy ? 'Создаём...' : 'Создать записи'}
+            </Button>
+          </div>
+        </section>
+
+        {/* Экспорт расхождений балансов */}
+        <Button
+          onClick={exportDiscrepancies}
+          variant="outline"
+          className="w-full font-black uppercase gap-2 rounded-2xl h-11"
+        >
+          <Download size={16} /> Экспорт расхождений (CSV)
+        </Button>
 
         {/* User list */}
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest pt-2">Все пользователи</h2>
