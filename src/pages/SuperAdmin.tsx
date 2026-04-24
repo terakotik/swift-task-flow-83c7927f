@@ -159,12 +159,11 @@ export default function SuperAdmin() {
   };
 
   const loadData = async () => {
-    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: doneData }, { data: completedAll }] = await Promise.all([
+    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
-      supabase.from('completed_tasks').select('user_id').eq('status', 'done'),
-      supabase.from('completed_tasks').select('user_id, task_id, status').in('status', ['done', 'paid']),
+      supabase.from('completed_tasks').select('user_id, task_id').eq('status', 'done'),
     ]);
 
     if (profilesError || rolesError || tasksError) {
@@ -177,23 +176,22 @@ export default function SuperAdmin() {
     setTasks(tasksData ?? []);
 
     const counts: Record<string, number> = {};
-    (doneData ?? []).forEach(d => { counts[d.user_id] = (counts[d.user_id] || 0) + 1; });
+    (completedDone ?? []).forEach(d => { counts[d.user_id] = (counts[d.user_id] || 0) + 1; });
     setDoneCounts(counts);
 
-    // Подсчёт по офферам: задание с картинкой vs без
     const taskTypeMap: Record<string, 'withImage' | 'noImage'> = {};
     (tasksData ?? []).forEach((t: any) => {
       const isImage = t.task_type === 'image' || !!t.image_url;
       taskTypeMap[t.id] = isImage ? 'withImage' : 'noImage';
     });
     const stats: Record<string, { withImage: number; noImage: number }> = {};
-    (completedAll ?? []).forEach((c: any) => {
+    (completedDone ?? []).forEach((c: any) => {
       const kind = taskTypeMap[c.task_id];
       if (!kind) return;
       if (!stats[c.user_id]) stats[c.user_id] = { withImage: 0, noImage: 0 };
       stats[c.user_id][kind] += 1;
     });
-    setOfferStats(stats);
+    setUnpaidOfferStats(stats);
   };
 
   const openHistory = async (profile: UserProfile) => {
@@ -402,48 +400,6 @@ export default function SuperAdmin() {
     });
   };
 
-  const exportDiscrepancies = () => {
-    const PRICE_IMAGE = 100;
-    const PRICE_TEXT = 70;
-    const lines = [
-      'email,display_name,current_balance,done_now,paid_now,total_now,expected_balance_done_only,diff(expected-current)',
-    ];
-    profiles.forEach(p => {
-      const stats = offerStats[p.user_id] || { withImage: 0, noImage: 0 };
-      const totalDoneAndPaid = stats.withImage + stats.noImage;
-      const doneOnly = doneCounts[p.user_id] || 0;
-      const paidOnly = Math.max(0, totalDoneAndPaid - doneOnly);
-      // ожидаемый баланс по done × средняя цена не известен точно; считаем по 20₽ как fallback и по миксу офферов
-      const expectedByMix = Math.round(
-        (stats.withImage * PRICE_IMAGE + stats.noImage * PRICE_TEXT) *
-          (doneOnly / Math.max(1, totalDoneAndPaid))
-      );
-      const diff = expectedByMix - Number(p.balance);
-      const safe = (s: any) => `"${String(s ?? '').replace(/"/g, '""')}"`;
-      lines.push(
-        [
-          safe(p.email),
-          safe(p.display_name),
-          p.balance,
-          doneOnly,
-          paidOnly,
-          totalDoneAndPaid,
-          expectedByMix,
-          diff,
-        ].join(',')
-      );
-    });
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `balance-discrepancies-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast({ title: 'CSV выгружен', description: 'Сравнение балансов сохранено' });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
