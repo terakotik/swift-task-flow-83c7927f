@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon, XCircle } from 'lucide-react';
+import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon, XCircle, Gift, Users, Share2 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Task = Tables<'tasks'>;
@@ -134,6 +134,9 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const [myCompleted, setMyCompleted] = useState<CompletedTaskWithDetails[]>([]);
   const [activeTab, setActiveTab] = useState<'available' | 'history'>('available');
   const [showSettings, setShowSettings] = useState(false);
+  const [showReferral, setShowReferral] = useState(false);
+  const [referralCode, setReferralCode] = useState<string>('');
+  const [referralStats, setReferralStats] = useState<{ count: number; earned: number }>({ count: 0, earned: 0 });
 
   useEffect(() => {
     if (!demoMode) return;
@@ -196,10 +199,22 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
 
   const loadProfile = async () => {
     if (!user) return;
-    const { data } = await supabase.from('profiles').select('balance, display_name').eq('user_id', user.id).single();
+    const { data } = await supabase.from('profiles').select('balance, display_name, referral_code').eq('user_id', user.id).single();
     if (data) {
       setBalance(data.balance);
       setDisplayName(data.display_name ?? '');
+      setReferralCode((data as any).referral_code ?? '');
+    }
+    // Реферальная статистика
+    const { data: rewards } = await supabase
+      .from('referral_rewards')
+      .select('amount')
+      .eq('referrer_id', user.id);
+    if (rewards) {
+      setReferralStats({
+        count: rewards.length,
+        earned: rewards.reduce((s, r: any) => s + Number(r.amount), 0),
+      });
     }
   };
 
@@ -399,6 +414,24 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
             </div>
           </div>
+
+          {/* Кнопка "Привести друга" — только для авторизованных, не в демо */}
+          {!demoMode && (
+            <button
+              onClick={() => setShowReferral(true)}
+              className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-2xl px-4 py-3 flex items-center justify-between gap-3 active:scale-[0.98] transition-transform shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <Gift size={20} />
+                <span className="text-xs font-black uppercase tracking-wider">Привести друга за 30₽</span>
+              </div>
+              {referralStats.count > 0 && (
+                <span className="text-[10px] font-black bg-background/20 px-2 py-1 rounded-full">
+                  +{referralStats.earned}₽ · {referralStats.count}
+                </span>
+              )}
+            </button>
+          )}
         </div>
         {!demoMode && (
           <div className="flex gap-2 px-5 pb-4">
@@ -600,6 +633,90 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
             <Button onClick={() => setShowInstruction(false)} className="w-full mt-8 font-black uppercase bg-foreground text-background hover:bg-foreground/90">
               Понятно
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Referral Modal */}
+      {showReferral && !demoMode && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setShowReferral(false)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-8 pb-12 animate-in slide-in-from-bottom max-w-md mx-auto">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-6" />
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-black text-foreground">Привести друга</h2>
+              <button onClick={() => setShowReferral(false)} className="p-2 bg-muted rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl p-5 mb-4 text-center">
+              <Gift className="text-accent mx-auto mb-2" size={32} />
+              <p className="text-3xl font-black text-foreground">+30₽</p>
+              <p className="text-xs font-bold text-muted-foreground mt-1">за каждого друга после его первой выплаты</p>
+            </div>
+
+            {referralCode && (
+              <>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">Ваша ссылка</p>
+                <div className="bg-muted/50 rounded-2xl p-3 flex items-center gap-2 mb-3">
+                  <span className="flex-1 text-xs font-mono font-bold text-foreground break-all">
+                    {window.location.origin}/uzero?ref={referralCode}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <Button
+                    onClick={() => copyText(`${window.location.origin}/uzero?ref=${referralCode}`)}
+                    className="font-black uppercase bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-xs"
+                  >
+                    <CopyIcon size={16} className="mr-1" />
+                    Скопировать
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      const url = `${window.location.origin}/uzero?ref=${referralCode}`;
+                      const text = `Подключайся ко мне в команду — получишь задания за деньги: ${url}`;
+                      if (navigator.share) {
+                        try {
+                          await navigator.share({ title: 'Привет!', text, url });
+                        } catch {}
+                      } else {
+                        copyText(text);
+                      }
+                    }}
+                    className="font-black uppercase bg-accent text-accent-foreground hover:bg-accent/90 h-12 text-xs"
+                  >
+                    <Share2 size={16} className="mr-1" />
+                    Поделиться
+                  </Button>
+                </div>
+
+                <div className="bg-muted/50 rounded-2xl p-4 mb-4">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Ваш код</p>
+                  <p className="text-2xl font-black tracking-widest text-foreground">{referralCode}</p>
+                </div>
+              </>
+            )}
+
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="bg-accent/10 rounded-2xl p-4 text-center">
+                <Users className="text-accent mx-auto mb-1" size={20} />
+                <p className="text-2xl font-black text-accent">{referralStats.count}</p>
+                <p className="text-[9px] font-black text-muted-foreground uppercase">Друзей</p>
+              </div>
+              <div className="bg-primary/10 rounded-2xl p-4 text-center">
+                <Wallet className="text-primary mx-auto mb-1" size={20} />
+                <p className="text-2xl font-black text-primary">{referralStats.earned}₽</p>
+                <p className="text-[9px] font-black text-muted-foreground uppercase">Заработано</p>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-muted-foreground font-medium space-y-1.5 px-1">
+              <p>1. Поделитесь ссылкой с другом</p>
+              <p>2. Друг регистрируется по вашей ссылке</p>
+              <p>3. Когда друг получит первую выплату — вам автоматически зачислится 30₽</p>
+            </div>
           </div>
         </div>
       )}
