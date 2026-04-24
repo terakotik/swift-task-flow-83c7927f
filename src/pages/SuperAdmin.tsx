@@ -41,6 +41,23 @@ interface CompletedTaskRow {
   tasks: { name: string } | null;
 }
 
+interface DeletedLogRow {
+  id: string;
+  original_id: string;
+  task_id: string;
+  user_id: string;
+  order_number: string;
+  status: string;
+  reject_reason: string | null;
+  accepted_at: string | null;
+  completed_at: string | null;
+  original_created_at: string;
+  deleted_at: string;
+  deleted_by: string | null;
+  restored: boolean;
+  restored_at: string | null;
+}
+
 export default function SuperAdmin() {
   const { user, loading, isAdmin, signOut } = useAuth();
   const { toast } = useToast();
@@ -57,6 +74,10 @@ export default function SuperAdmin() {
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [deletedLog, setDeletedLog] = useState<DeletedLogRow[]>([]);
+  const [logDate, setLogDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [logLoading, setLogLoading] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
