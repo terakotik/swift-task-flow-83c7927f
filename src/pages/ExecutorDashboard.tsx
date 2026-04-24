@@ -423,7 +423,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
             >
               <div className="flex items-center gap-2">
                 <Gift size={20} />
-                <span className="text-xs font-black uppercase tracking-wider">Привести друга за 30₽</span>
+                <span className="text-xs font-black uppercase tracking-wider">Привести друга за деньги</span>
               </div>
               {referralStats.count > 0 && (
                 <span className="text-[10px] font-black bg-background/20 px-2 py-1 rounded-full">
