@@ -709,6 +709,113 @@ export default function SuperAdmin() {
           </div>
         </section>
 
+        {/* Ручное восстановление completed_tasks */}
+        <section className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Wrench size={18} className="text-primary" />
+            <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
+              Ручное восстановление
+            </h2>
+          </div>
+          <p className="text-[10px] text-muted-foreground font-bold">
+            Создаёт записи completed_tasks по списку номеров заказов. Если статус «done» — баланс пересчитается автоматически (price × количество). Если «paid» — без изменения баланса.
+          </p>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Пользователь</label>
+            <select
+              value={mrUserId}
+              onChange={e => setMrUserId(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">— выберите пользователя —</option>
+              {profiles.map(p => (
+                <option key={p.user_id} value={p.user_id}>
+                  {p.email || p.display_name || p.user_id.slice(0, 8)} • {p.balance}₽
+                </option>
+              ))}
+            </select>
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Задание (привязка)</label>
+            <select
+              value={mrTaskId}
+              onChange={e => setMrTaskId(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">— выберите задание —</option>
+              {tasks.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({t.addr1 || '—'})
+                </option>
+              ))}
+            </select>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-black uppercase text-muted-foreground">Статус</label>
+                <select
+                  value={mrStatus}
+                  onChange={e => setMrStatus(e.target.value as 'done' | 'paid')}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="done">done (к выплате, +баланс)</option>
+                  <option value="paid">paid (уже выплачено)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-muted-foreground">Цена за 1, ₽</label>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  value={mrPrice}
+                  onChange={e => setMrPrice(e.target.value)}
+                  className="h-10 text-sm"
+                />
+              </div>
+            </div>
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">
+              Номера заказов (через запятую, пробел или новую строку)
+            </label>
+            <textarea
+              value={mrOrders}
+              onChange={e => setMrOrders(e.target.value)}
+              rows={4}
+              placeholder="260421-001, 260421-002, 260421-003"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
+            {(() => {
+              const count = mrOrders.split(/[\s,;\n\r\t]+/).filter(Boolean).length;
+              const sum = mrStatus === 'done' ? count * (Number(mrPrice) || 0) : 0;
+              return (
+                <p className="text-[11px] font-bold text-muted-foreground">
+                  Будет создано: <span className="text-foreground">{count}</span>
+                  {mrStatus === 'done' && (
+                    <> • Баланс +<span className="text-accent">{sum}₽</span></>
+                  )}
+                </p>
+              );
+            })()}
+
+            <Button
+              onClick={manualRestore}
+              disabled={mrBusy}
+              className="w-full font-black uppercase rounded-2xl h-11 gap-2"
+            >
+              <Undo2 size={16} /> {mrBusy ? 'Создаём...' : 'Создать записи'}
+            </Button>
+          </div>
+        </section>
+
+        {/* Экспорт расхождений балансов */}
+        <Button
+          onClick={exportDiscrepancies}
+          variant="outline"
+          className="w-full font-black uppercase gap-2 rounded-2xl h-11"
+        >
+          <Download size={16} /> Экспорт расхождений (CSV)
+        </Button>
+
         {/* User list */}
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest pt-2">Все пользователи</h2>
         {profiles.map(p => {
