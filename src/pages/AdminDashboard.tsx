@@ -32,6 +32,17 @@ interface TaskInfo {
   restaurant_tag?: string | null;
 }
 
+interface OrderIssueReport {
+  id: string;
+  created_at: string;
+  problem_type: string;
+  status: string;
+  task_id: string;
+  user_id: string;
+  tasks: { id: string; name: string | null; link: string | null } | null;
+  executor_name?: string;
+}
+
 function parseTaskText(text: string): { name: string; addr1: string; addr2: string; link: string; task_id: string } | null {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
 
@@ -100,10 +111,11 @@ export default function AdminDashboard() {
   const [allTasks, setAllTasks] = useState<TaskInfo[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
   const [taskText, setTaskText] = useState('');
-  const [activeTab, setActiveTab] = useState<'pending' | 'done' | 'archive' | 'mytasks' | 'users'>('mytasks');
+  const [activeTab, setActiveTab] = useState<'pending' | 'done' | 'archive' | 'mytasks' | 'users' | 'issues'>('mytasks');
   const [taskExecutorCounts, setTaskExecutorCounts] = useState<Record<string, number>>({});
   const [historyUser, setHistoryUser] = useState<{ user_id: string; name: string } | null>(null);
   const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string; status: string; task_type?: string; image_url?: string | null }>>([]);
+  const [issueReports, setIssueReports] = useState<OrderIssueReport[]>([]);
 
   // Reject flow
   const [rejectTarget, setRejectTarget] = useState<CompletedTaskWithProfile | null>(null);
@@ -141,6 +153,7 @@ export default function AdminDashboard() {
     loadCompletedTasks();
     loadAllTasks();
     loadExecutorCounts();
+    loadIssueReports();
     const interval = setInterval(checkExpiredTasks, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -192,6 +205,31 @@ export default function AdminDashboard() {
       ...ct,
       tasks: ct.tasks as any,
       executor_name: profileMap.get(ct.user_id) ?? undefined,
+    })));
+  };
+
+  const loadIssueReports = async () => {
+    const { data } = await (supabase as any)
+      .from('order_issue_reports')
+      .select('id, created_at, problem_type, status, task_id, user_id, tasks(id, name, link)')
+      .order('created_at', { ascending: false });
+
+    if (!data) {
+      setIssueReports([]);
+      return;
+    }
+
+    const userIds = [...new Set(data.map((item: any) => item.user_id))];
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, display_name')
+      .in('user_id', userIds);
+
+    const profileMap = new Map(profiles?.map(p => [p.user_id, p.display_name]) ?? []);
+    setIssueReports((data as any[]).map((item) => ({
+      ...item,
+      tasks: item.tasks as any,
+      executor_name: profileMap.get(item.user_id) ?? undefined,
     })));
   };
 
@@ -379,6 +417,45 @@ export default function AdminDashboard() {
     loadCompletedTasks();
     loadAllTasks();
     loadExecutorCounts();
+    toast({ title: 'Задание удалено' });
+  };
+
+  const resolveIssue = async (issueId: string) => {
+    const { error } = await (supabase as any)
+      .from('order_issue_reports')
+      .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+      .eq('id', issueId);
+
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    loadIssueReports();
+    toast({ title: 'Проблема отмечена как исправленная' });
+  };
+
+  const deleteTaskFromIssue = async (issue: OrderIssueReport) => {
+    if (!issue.tasks?.id) return;
+
+    const { error: issueError } = await (supabase as any)
+      .from('order_issue_reports')
+      .delete()
+      .eq('id', issue.id);
+
+    if (issueError) {
+      toast({ title: 'Ошибка', description: issueError.message, variant: 'destructive' });
+      return;
+    }
+
+    const { error: taskError } = await supabase.from('tasks').delete().eq('id', issue.tasks.id);
+    if (taskError) {
+      toast({ title: 'Ошибка удаления', description: taskError.message, variant: 'destructive' });
+      return;
+    }
+
+    loadIssueReports();
+    loadAllTasks();
     toast({ title: 'Задание удалено' });
   };
 
