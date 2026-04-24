@@ -681,6 +681,9 @@ export default function AdminDashboard() {
                       <h3 className="font-black text-foreground text-sm uppercase">{restaurant}</h3>
                       {street && <p className="text-[10px] text-muted-foreground font-bold">{street}</p>}
                       <p className="text-[9px] text-muted-foreground font-bold">Исполнитель: {ct.executor_name ? ct.executor_name.split('@')[0] : 'N/A'}</p>
+                      <p className="text-[9px] text-muted-foreground font-bold">
+                        Отправлено: {new Date(ct.created_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} МСК
+                      </p>
                     </div>
                     <div className="flex items-center gap-1">
                       {ct.status === 'pending' && <Clock size={14} className="text-warning" />}
