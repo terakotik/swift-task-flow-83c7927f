@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon, XCircle } from 'lucide-react';
+import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon, XCircle, Gift, Users, Share2 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Task = Tables<'tasks'>;
