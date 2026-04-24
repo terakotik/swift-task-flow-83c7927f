@@ -150,12 +150,64 @@ export default function AdminDashboard() {
   const [tagInput, setTagInput] = useState('');
 
   useEffect(() => {
-    loadCompletedTasks();
-    loadAllTasks();
-    loadExecutorCounts();
-    loadIssueReports();
-    const interval = setInterval(checkExpiredTasks, 30000);
-    return () => clearInterval(interval);
+    const refreshAdminData = () => {
+      loadCompletedTasks();
+      loadAllTasks();
+      loadExecutorCounts();
+      loadIssueReports();
+    };
+
+    refreshAdminData();
+
+    const expireInterval = setInterval(checkExpiredTasks, 30000);
+    const refreshInterval = setInterval(refreshAdminData, 10000);
+    const handleWindowFocus = () => refreshAdminData();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshAdminData();
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const completedTasksChannel = supabase
+      .channel('admin-completed-tasks-feed')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'completed_tasks' },
+        () => {
+          loadCompletedTasks();
+          loadExecutorCounts();
+        }
+      )
+      .subscribe();
+
+    const tasksChannel = supabase
+      .channel('admin-tasks-feed')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        () => loadAllTasks()
+      )
+      .subscribe();
+
+    const issueReportsChannel = supabase
+      .channel('admin-issue-reports-feed')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'order_issue_reports' },
+        () => loadIssueReports()
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(expireInterval);
+      clearInterval(refreshInterval);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      supabase.removeChannel(completedTasksChannel);
+      supabase.removeChannel(tasksChannel);
+      supabase.removeChannel(issueReportsChannel);
+    };
   }, []);
 
   const loadAllTasks = async () => {
