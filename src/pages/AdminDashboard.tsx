@@ -219,7 +219,7 @@ export default function AdminDashboard() {
       return;
     }
 
-    const userIds = [...new Set(data.map((item: any) => item.user_id))];
+    const userIds = [...new Set((data as any[]).map((item) => item.user_id))] as string[];
     const { data: profiles } = await supabase
       .from('profiles')
       .select('user_id, display_name')
@@ -483,6 +483,7 @@ export default function AdminDashboard() {
     .filter(t => t.status === 'archived')
     .filter(t => archiveFilter === 'all' ? true : archiveFilter === '__none__' ? !t.restaurant_tag : t.restaurant_tag === archiveFilter);
   const activeTasks = allTasks.filter(t => t.status === 'available');
+  const pendingIssues = issueReports.filter(issue => issue.status === 'pending');
 
   // Aggregate done tasks per user (these reset to 'paid' after super-admin payout)
   const usersWithDone = (() => {
@@ -551,11 +552,12 @@ export default function AdminDashboard() {
           </div>
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          {(['pending', 'done', 'mytasks', 'users', 'archive'] as const).map(tab => {
+          {(['pending', 'done', 'mytasks', 'users', 'issues', 'archive'] as const).map(tab => {
             const pendingCount = completedTasks.filter(c => c.status === 'pending').length;
             const showDot = tab === 'pending' && pendingCount > 0 && activeTab !== 'pending';
             const needsPayoutCount = usersWithDone.filter(u => u.count >= 10).length;
             const showUsersAlert = tab === 'users' && needsPayoutCount > 0 && activeTab !== 'users';
+            const showIssuesAlert = tab === 'issues' && pendingIssues.length > 0 && activeTab !== 'issues';
             return (
               <button
                 key={tab}
@@ -572,7 +574,12 @@ export default function AdminDashboard() {
                     {needsPayoutCount}
                   </span>
                 )}
-                {tab === 'pending' ? 'Заявки' : tab === 'done' ? 'Готовые' : tab === 'mytasks' ? 'Задания' : tab === 'users' ? 'Юзеры' : 'Архив'}
+                {showIssuesAlert && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full text-[8px] text-destructive-foreground flex items-center justify-center font-black animate-pulse">
+                    {pendingIssues.length}
+                  </span>
+                )}
+                {tab === 'pending' ? 'Заявки' : tab === 'done' ? 'Готовые' : tab === 'mytasks' ? 'Задания' : tab === 'users' ? 'Юзеры' : tab === 'issues' ? 'Проблемы' : 'Архив'}
               </button>
             );
           })}
