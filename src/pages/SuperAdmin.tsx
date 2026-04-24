@@ -313,6 +313,128 @@ export default function SuperAdmin() {
       description: `${profile.display_name || profile.email || 'Пользователь'} • новый баланс ${newBalance}₽`,
     });
   };
+
+  const manualRestore = async () => {
+    if (!isAdmin && !currentUserIsAdmin) {
+      toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
+      return;
+    }
+    if (!mrUserId) {
+      toast({ title: 'Выберите пользователя', variant: 'destructive' });
+      return;
+    }
+    if (!mrTaskId) {
+      toast({ title: 'Выберите задание', variant: 'destructive' });
+      return;
+    }
+    const orders = mrOrders
+      .split(/[\s,;\n\r\t]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (orders.length === 0) {
+      toast({ title: 'Введите хотя бы один номер заказа', variant: 'destructive' });
+      return;
+    }
+    const price = Math.max(0, Number(mrPrice) || 0);
+    const profile = profiles.find(p => p.user_id === mrUserId);
+    if (!profile) {
+      toast({ title: 'Пользователь не найден', variant: 'destructive' });
+      return;
+    }
+    const sumDelta = mrStatus === 'done' ? price * orders.length : 0;
+    const confirmMsg =
+      `Создать ${orders.length} запис${orders.length === 1 ? 'ь' : 'и/ей'} со статусом "${mrStatus}" для ${profile.email}.` +
+      (mrStatus === 'done' ? ` Баланс будет увеличен на ${sumDelta}₽.` : ' Баланс не изменится (статус paid).');
+    if (!confirm(confirmMsg)) return;
+
+    setMrBusy(true);
+    const nowIso = new Date().toISOString();
+    const rows = orders.map(order_number => ({
+      task_id: mrTaskId,
+      user_id: mrUserId,
+      order_number,
+      status: mrStatus,
+      accepted_at: nowIso,
+      completed_at: nowIso,
+    }));
+    const { data: inserted, error } = await supabase
+      .from('completed_tasks')
+      .insert(rows)
+      .select('id');
+    if (error) {
+      setMrBusy(false);
+      toast({ title: 'Ошибка вставки', description: error.message, variant: 'destructive' });
+      return;
+    }
+    if (mrStatus === 'done' && sumDelta > 0) {
+      const newBalance = Number(profile.balance) + sumDelta;
+      const { error: balErr } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('user_id', mrUserId);
+      if (balErr) {
+        setMrBusy(false);
+        toast({
+          title: 'Записи созданы, но баланс не обновлён',
+          description: balErr.message,
+          variant: 'destructive',
+        });
+        await loadData();
+        return;
+      }
+    }
+    setMrBusy(false);
+    setMrOrders('');
+    await loadData();
+    toast({
+      title: 'Восстановлено',
+      description: `Создано: ${inserted?.length ?? orders.length}. ${mrStatus === 'done' ? `+${sumDelta}₽ на баланс.` : 'Статус paid (без изменения баланса).'}`,
+    });
+  };
+
+  const exportDiscrepancies = () => {
+    const PRICE_IMAGE = 100;
+    const PRICE_TEXT = 70;
+    const lines = [
+      'email,display_name,current_balance,done_now,paid_now,total_now,expected_balance_done_only,diff(expected-current)',
+    ];
+    profiles.forEach(p => {
+      const stats = offerStats[p.user_id] || { withImage: 0, noImage: 0 };
+      const totalDoneAndPaid = stats.withImage + stats.noImage;
+      const doneOnly = doneCounts[p.user_id] || 0;
+      const paidOnly = Math.max(0, totalDoneAndPaid - doneOnly);
+      // ожидаемый баланс по done × средняя цена не известен точно; считаем по 20₽ как fallback и по миксу офферов
+      const expectedByMix = Math.round(
+        (stats.withImage * PRICE_IMAGE + stats.noImage * PRICE_TEXT) *
+          (doneOnly / Math.max(1, totalDoneAndPaid))
+      );
+      const diff = expectedByMix - Number(p.balance);
+      const safe = (s: any) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+      lines.push(
+        [
+          safe(p.email),
+          safe(p.display_name),
+          p.balance,
+          doneOnly,
+          paidOnly,
+          totalDoneAndPaid,
+          expectedByMix,
+          diff,
+        ].join(',')
+      );
+    });
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `balance-discrepancies-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: 'CSV выгружен', description: 'Сравнение балансов сохранено' });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
