@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -99,15 +99,7 @@ export default function SuperAdmin() {
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
   const canManageTasks = isSuperAdmin && (isAdmin || currentUserIsAdmin);
 
-  useEffect(() => {
-    if (isSuperAdmin) loadData();
-  }, [isSuperAdmin]);
-
-  useEffect(() => {
-    if (isSuperAdmin) loadDeletedLog();
-  }, [isSuperAdmin, logDate]);
-
-  const loadDeletedLog = async () => {
+  const loadDeletedLog = useCallback(async () => {
     setLogLoading(true);
     const start = new Date(`${logDate}T00:00:00`);
     const end = new Date(`${logDate}T23:59:59.999`);
@@ -123,7 +115,7 @@ export default function SuperAdmin() {
       return;
     }
     setDeletedLog((data as any) ?? []);
-  };
+  }, [logDate, toast]);
 
   const restoreDeleted = async (row: DeletedLogRow) => {
     if (!isAdmin && !currentUserIsAdmin) {
@@ -167,7 +159,7 @@ export default function SuperAdmin() {
     toast({ title: 'Восстановлено', description: `Заказ №${row.order_number}` });
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
@@ -201,7 +193,41 @@ export default function SuperAdmin() {
       stats[c.user_id][kind] += 1;
     });
     setUnpaidOfferStats(stats);
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (isSuperAdmin) loadData();
+  }, [isSuperAdmin, loadData]);
+
+  useEffect(() => {
+    if (isSuperAdmin) loadDeletedLog();
+  }, [isSuperAdmin, loadDeletedLog]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+
+    const refreshSuperAdminData = () => {
+      loadData();
+      loadDeletedLog();
+    };
+
+    refreshSuperAdminData();
+
+    const refreshInterval = setInterval(refreshSuperAdminData, 10000);
+    const handleWindowFocus = () => refreshSuperAdminData();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshSuperAdminData();
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isSuperAdmin, loadData, loadDeletedLog]);
 
   const openHistory = async (profile: UserProfile) => {
     setHistoryUser(profile);
