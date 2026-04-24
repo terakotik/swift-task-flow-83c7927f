@@ -58,6 +58,57 @@ export type Database = {
           },
         ]
       }
+      deleted_completed_tasks_log: {
+        Row: {
+          accepted_at: string | null
+          completed_at: string | null
+          deleted_at: string
+          deleted_by: string | null
+          id: string
+          order_number: string
+          original_created_at: string
+          original_id: string
+          reject_reason: string | null
+          restored: boolean
+          restored_at: string | null
+          status: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          completed_at?: string | null
+          deleted_at?: string
+          deleted_by?: string | null
+          id?: string
+          order_number: string
+          original_created_at: string
+          original_id: string
+          reject_reason?: string | null
+          restored?: boolean
+          restored_at?: string | null
+          status: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          completed_at?: string | null
+          deleted_at?: string
+          deleted_by?: string | null
+          id?: string
+          order_number?: string
+          original_created_at?: string
+          original_id?: string
+          reject_reason?: string | null
+          restored?: boolean
+          restored_at?: string | null
+          status?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           balance: number
