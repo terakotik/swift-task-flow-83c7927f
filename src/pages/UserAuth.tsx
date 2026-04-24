@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import ExecutorDashboard from './ExecutorDashboard';
-import { LogIn } from 'lucide-react';
+import { LogIn, Gift } from 'lucide-react';
+
+const REF_STORAGE_KEY = 'pending_referral_code';
 
 export default function UserAuth() {
   const { user, loading } = useAuth();
@@ -15,7 +17,28 @@ export default function UserAuth() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [refCode, setRefCode] = useState<string>('');
+  const [refName, setRefName] = useState<string>('');
   const { toast } = useToast();
+
+  // Read ?ref= from URL on mount, persist in localStorage
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('ref')?.toUpperCase().trim();
+    const stored = localStorage.getItem(REF_STORAGE_KEY)?.toUpperCase().trim();
+    const code = fromUrl || stored || '';
+    if (fromUrl) localStorage.setItem(REF_STORAGE_KEY, fromUrl);
+    if (code) {
+      setRefCode(code);
+      setIsLogin(false); // open in signup mode
+      setAuthOpen(true);
+      // Lookup referrer name
+      supabase.rpc('lookup_referrer', { _code: code }).then(({ data }) => {
+        const d = data as any;
+        if (d?.found) setRefName(d.name || '');
+      });
+    }
+  }, []);
 
   if (loading) {
     return (
