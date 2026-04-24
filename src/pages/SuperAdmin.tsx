@@ -272,6 +272,16 @@ export default function SuperAdmin() {
         .update({ status: 'paid' })
         .eq('user_id', profile.user_id)
         .eq('status', 'done');
+
+      // Реферальная выплата: если у юзера есть пригласивший и это первая выплата — начислить 30₽
+      const { data: refRes } = await supabase.rpc('process_referral_payout', { _user_id: profile.user_id });
+      const r = refRes as any;
+      if (r?.ok && r?.rewarded) {
+        toast({
+          title: '🎁 Реферальный бонус начислен',
+          description: `Пригласившему +${r.amount}₽ за приведённого друга`,
+        });
+      }
     }
     setAdjustingId(null);
     if (error) {
