@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, BarChart3, Image as ImageIcon, FileText, Archive, Undo2, Wrench, Download } from 'lucide-react';
+import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, Archive, Undo2, Wrench } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
 
@@ -70,7 +70,7 @@ export default function SuperAdmin() {
   const [adjustAmounts, setAdjustAmounts] = useState<Record<string, string>>({});
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
-  const [offerStats, setOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
+  const [unpaidOfferStats, setUnpaidOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
