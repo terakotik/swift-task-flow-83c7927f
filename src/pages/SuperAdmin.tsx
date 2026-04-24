@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, BarChart3, Image as ImageIcon, FileText } from 'lucide-react';
+import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, BarChart3, Image as ImageIcon, FileText, Archive, Undo2 } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
 
@@ -41,6 +41,23 @@ interface CompletedTaskRow {
   tasks: { name: string } | null;
 }
 
+interface DeletedLogRow {
+  id: string;
+  original_id: string;
+  task_id: string;
+  user_id: string;
+  order_number: string;
+  status: string;
+  reject_reason: string | null;
+  accepted_at: string | null;
+  completed_at: string | null;
+  original_created_at: string;
+  deleted_at: string;
+  deleted_by: string | null;
+  restored: boolean;
+  restored_at: string | null;
+}
+
 export default function SuperAdmin() {
   const { user, loading, isAdmin, signOut } = useAuth();
   const { toast } = useToast();
@@ -57,6 +74,10 @@ export default function SuperAdmin() {
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [deletedLog, setDeletedLog] = useState<DeletedLogRow[]>([]);
+  const [logDate, setLogDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [logLoading, setLogLoading] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
@@ -65,6 +86,70 @@ export default function SuperAdmin() {
   useEffect(() => {
     if (isSuperAdmin) loadData();
   }, [isSuperAdmin]);
+
+  useEffect(() => {
+    if (isSuperAdmin) loadDeletedLog();
+  }, [isSuperAdmin, logDate]);
+
+  const loadDeletedLog = async () => {
+    setLogLoading(true);
+    const start = new Date(`${logDate}T00:00:00`);
+    const end = new Date(`${logDate}T23:59:59.999`);
+    const { data, error } = await supabase
+      .from('deleted_completed_tasks_log')
+      .select('*')
+      .gte('deleted_at', start.toISOString())
+      .lte('deleted_at', end.toISOString())
+      .order('deleted_at', { ascending: false });
+    setLogLoading(false);
+    if (error) {
+      toast({ title: 'Ошибка журнала', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setDeletedLog((data as any) ?? []);
+  };
+
+  const restoreDeleted = async (row: DeletedLogRow) => {
+    if (!isAdmin && !currentUserIsAdmin) {
+      toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
+      return;
+    }
+    setRestoringId(row.id);
+    const { data: taskExists } = await supabase
+      .from('tasks').select('id').eq('id', row.task_id).maybeSingle();
+    if (!taskExists) {
+      setRestoringId(null);
+      toast({
+        title: 'Задание удалено',
+        description: 'Невозможно восстановить: исходное задание тоже удалено из базы.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const { error: insertErr } = await supabase.from('completed_tasks').insert({
+      id: row.original_id,
+      task_id: row.task_id,
+      user_id: row.user_id,
+      order_number: row.order_number,
+      status: row.status,
+      reject_reason: row.reject_reason,
+      accepted_at: row.accepted_at,
+      completed_at: row.completed_at,
+      created_at: row.original_created_at,
+    });
+    if (insertErr) {
+      setRestoringId(null);
+      toast({ title: 'Ошибка восстановления', description: insertErr.message, variant: 'destructive' });
+      return;
+    }
+    await supabase
+      .from('deleted_completed_tasks_log')
+      .update({ restored: true, restored_at: new Date().toISOString() })
+      .eq('id', row.id);
+    setRestoringId(null);
+    await Promise.all([loadDeletedLog(), loadData()]);
+    toast({ title: 'Восстановлено', description: `Заказ №${row.order_number}` });
+  };
 
   const loadData = async () => {
     const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: doneData }, { data: completedAll }] = await Promise.all([
@@ -419,6 +504,81 @@ export default function SuperAdmin() {
             </section>
           );
         })()}
+
+        {/* Журнал удалений / восстановление */}
+        <section className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Archive size={18} className="text-warning" />
+            <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
+              Журнал удалений
+            </h2>
+          </div>
+          <p className="text-[10px] text-muted-foreground font-bold">
+            Все строки, удалённые из архива выполненных заданий. Можно восстановить за выбранную дату.
+          </p>
+          <div className="flex gap-2 items-center">
+            <Input
+              type="date"
+              value={logDate}
+              onChange={e => setLogDate(e.target.value)}
+              className="h-9 text-sm flex-1"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 rounded-xl px-3"
+              onClick={loadDeletedLog}
+              disabled={logLoading}
+            >
+              <RefreshCw size={14} />
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            {logLoading && (
+              <p className="text-center text-muted-foreground text-xs py-4">Загрузка...</p>
+            )}
+            {!logLoading && deletedLog.length === 0 && (
+              <p className="text-center text-muted-foreground text-xs py-4">
+                За {new Date(logDate).toLocaleDateString('ru-RU')} удалений не было
+              </p>
+            )}
+            {deletedLog.map(row => {
+              const owner = profiles.find(p => p.user_id === row.user_id);
+              return (
+                <div key={row.id} className="bg-muted/50 rounded-xl p-3">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-black text-foreground truncate">
+                        {owner?.display_name || owner?.email || row.user_id.slice(0, 8)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-bold">
+                        Заказ №{row.order_number} • статус: {row.status}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground">
+                        Удалено: {new Date(row.deleted_at).toLocaleString('ru-RU')}
+                      </p>
+                    </div>
+                    {row.restored ? (
+                      <span className="text-[9px] font-black px-2 py-1 rounded-full bg-accent/10 text-accent uppercase shrink-0">
+                        Восст.
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="h-8 rounded-xl gap-1 font-black uppercase text-[10px] bg-accent text-accent-foreground hover:bg-accent/90 shrink-0"
+                        onClick={() => restoreDeleted(row)}
+                        disabled={restoringId === row.id}
+                      >
+                        <Undo2 size={12} /> Вернуть
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
         {/* User list */}
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest pt-2">Все пользователи</h2>
