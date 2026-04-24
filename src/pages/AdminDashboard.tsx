@@ -667,6 +667,66 @@ export default function AdminDashboard() {
           </>
         )}
 
+        {activeTab === 'issues' && (
+          <>
+            {issueReports.length === 0 && (
+              <p className="text-center text-muted-foreground py-12">Нет проблем по заказам</p>
+            )}
+            {issueReports.map(issue => {
+              const { restaurant, street } = splitName(issue.tasks?.name ?? 'Задание');
+              const isResolved = issue.status === 'resolved';
+
+              return (
+                <div
+                  key={issue.id}
+                  className={`rounded-2xl border p-5 shadow-sm space-y-3 ${isResolved ? 'bg-accent/10 border-accent/30' : 'bg-card border-border'}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-black uppercase text-foreground">{restaurant}</h3>
+                      {street && <p className="text-[10px] font-bold text-muted-foreground">{street}</p>}
+                      <p className="text-[9px] font-bold text-muted-foreground">Исполнитель: {issue.executor_name ? issue.executor_name.split('@')[0] : 'N/A'}</p>
+                      <p className="text-[9px] font-bold text-muted-foreground">
+                        Отправлено: {new Date(issue.created_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} МСК
+                      </p>
+                    </div>
+                    <span className={`rounded-lg px-2 py-1 text-[9px] font-black uppercase ${isResolved ? 'bg-accent text-accent-foreground' : 'bg-warning/15 text-warning'}`}>
+                      {isResolved ? 'Поправили' : 'Ожидает'}
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl bg-muted p-3">
+                    <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Проблема</p>
+                    <p className="text-sm font-black text-foreground">{issue.problem_type}</p>
+                  </div>
+
+                  {issue.tasks?.link && (
+                    <a
+                      href={issue.tasks.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-xs font-black text-primary underline-offset-4 hover:underline"
+                    >
+                      Открыть ресторан
+                    </a>
+                  )}
+
+                  {!isResolved && (
+                    <div className="flex gap-2">
+                      <Button onClick={() => resolveIssue(issue.id)} variant="outline" className="flex-1 text-xs font-bold gap-2">
+                        <Check size={14} /> Поправили
+                      </Button>
+                      <Button onClick={() => deleteTaskFromIssue(issue)} variant="destructive" className="flex-1 text-xs font-bold">
+                        Удалить задание
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </>
+        )}
+
         {activeTab === 'archive' && (
           <>
             {/* Filter chips by restaurant tag */}
