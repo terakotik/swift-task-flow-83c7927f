@@ -78,6 +78,13 @@ export default function SuperAdmin() {
   const [logDate, setLogDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [logLoading, setLogLoading] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  // Manual restore form state
+  const [mrUserId, setMrUserId] = useState<string>('');
+  const [mrTaskId, setMrTaskId] = useState<string>('');
+  const [mrStatus, setMrStatus] = useState<'done' | 'paid'>('done');
+  const [mrPrice, setMrPrice] = useState<string>('20');
+  const [mrOrders, setMrOrders] = useState<string>('');
+  const [mrBusy, setMrBusy] = useState(false);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
