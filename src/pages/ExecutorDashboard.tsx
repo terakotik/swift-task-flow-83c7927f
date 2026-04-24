@@ -199,10 +199,22 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
 
   const loadProfile = async () => {
     if (!user) return;
-    const { data } = await supabase.from('profiles').select('balance, display_name').eq('user_id', user.id).single();
+    const { data } = await supabase.from('profiles').select('balance, display_name, referral_code').eq('user_id', user.id).single();
     if (data) {
       setBalance(data.balance);
       setDisplayName(data.display_name ?? '');
+      setReferralCode((data as any).referral_code ?? '');
+    }
+    // Реферальная статистика
+    const { data: rewards } = await supabase
+      .from('referral_rewards')
+      .select('amount')
+      .eq('referrer_id', user.id);
+    if (rewards) {
+      setReferralStats({
+        count: rewards.length,
+        earned: rewards.reduce((s, r: any) => s + Number(r.amount), 0),
+      });
     }
   };
 
