@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      balance_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          delta: number
+          id: string
+          new_balance: number
+          old_balance: number
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          delta: number
+          id?: string
+          new_balance: number
+          old_balance: number
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          delta?: number
+          id?: string
+          new_balance?: number
+          old_balance?: number
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       completed_tasks: {
         Row: {
           accepted_at: string | null
@@ -115,7 +148,10 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string | null
+          first_payout_at: string | null
           id: string
+          referral_code: string | null
+          referred_by: string | null
           updated_at: string
           user_id: string
         }
@@ -124,7 +160,10 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          first_payout_at?: string | null
           id?: string
+          referral_code?: string | null
+          referred_by?: string | null
           updated_at?: string
           user_id: string
         }
@@ -133,9 +172,36 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          first_payout_at?: string | null
           id?: string
+          referral_code?: string | null
+          referred_by?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      referral_rewards: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          referred_id: string
+          referrer_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          referred_id: string
+          referrer_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          referred_id?: string
+          referrer_id?: string
         }
         Relationships: []
       }
@@ -210,6 +276,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -217,6 +284,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      lookup_referrer: { Args: { _code: string }; Returns: Json }
+      process_referral_payout: { Args: { _user_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"
