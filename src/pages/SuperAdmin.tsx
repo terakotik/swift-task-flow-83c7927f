@@ -87,6 +87,70 @@ export default function SuperAdmin() {
     if (isSuperAdmin) loadData();
   }, [isSuperAdmin]);
 
+  useEffect(() => {
+    if (isSuperAdmin) loadDeletedLog();
+  }, [isSuperAdmin, logDate]);
+
+  const loadDeletedLog = async () => {
+    setLogLoading(true);
+    const start = new Date(`${logDate}T00:00:00`);
+    const end = new Date(`${logDate}T23:59:59.999`);
+    const { data, error } = await supabase
+      .from('deleted_completed_tasks_log')
+      .select('*')
+      .gte('deleted_at', start.toISOString())
+      .lte('deleted_at', end.toISOString())
+      .order('deleted_at', { ascending: false });
+    setLogLoading(false);
+    if (error) {
+      toast({ title: 'Ошибка журнала', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setDeletedLog((data as any) ?? []);
+  };
+
+  const restoreDeleted = async (row: DeletedLogRow) => {
+    if (!isAdmin && !currentUserIsAdmin) {
+      toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
+      return;
+    }
+    setRestoringId(row.id);
+    const { data: taskExists } = await supabase
+      .from('tasks').select('id').eq('id', row.task_id).maybeSingle();
+    if (!taskExists) {
+      setRestoringId(null);
+      toast({
+        title: 'Задание удалено',
+        description: 'Невозможно восстановить: исходное задание тоже удалено из базы.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const { error: insertErr } = await supabase.from('completed_tasks').insert({
+      id: row.original_id,
+      task_id: row.task_id,
+      user_id: row.user_id,
+      order_number: row.order_number,
+      status: row.status,
+      reject_reason: row.reject_reason,
+      accepted_at: row.accepted_at,
+      completed_at: row.completed_at,
+      created_at: row.original_created_at,
+    });
+    if (insertErr) {
+      setRestoringId(null);
+      toast({ title: 'Ошибка восстановления', description: insertErr.message, variant: 'destructive' });
+      return;
+    }
+    await supabase
+      .from('deleted_completed_tasks_log')
+      .update({ restored: true, restored_at: new Date().toISOString() })
+      .eq('id', row.id);
+    setRestoringId(null);
+    await Promise.all([loadDeletedLog(), loadData()]);
+    toast({ title: 'Восстановлено', description: `Заказ №${row.order_number}` });
+  };
+
   const loadData = async () => {
     const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: doneData }, { data: completedAll }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
