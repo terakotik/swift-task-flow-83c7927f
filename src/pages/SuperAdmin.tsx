@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, BarChart3, Image as ImageIcon, FileText, Archive, Undo2, Wrench, Download } from 'lucide-react';
+import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, Archive, Undo2, Wrench } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
 
@@ -70,7 +70,7 @@ export default function SuperAdmin() {
   const [adjustAmounts, setAdjustAmounts] = useState<Record<string, string>>({});
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
-  const [offerStats, setOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
+  const [unpaidOfferStats, setUnpaidOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -159,12 +159,11 @@ export default function SuperAdmin() {
   };
 
   const loadData = async () => {
-    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: doneData }, { data: completedAll }] = await Promise.all([
+    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
-      supabase.from('completed_tasks').select('user_id').eq('status', 'done'),
-      supabase.from('completed_tasks').select('user_id, task_id, status').in('status', ['done', 'paid']),
+      supabase.from('completed_tasks').select('user_id, task_id').eq('status', 'done'),
     ]);
 
     if (profilesError || rolesError || tasksError) {
@@ -177,23 +176,22 @@ export default function SuperAdmin() {
     setTasks(tasksData ?? []);
 
     const counts: Record<string, number> = {};
-    (doneData ?? []).forEach(d => { counts[d.user_id] = (counts[d.user_id] || 0) + 1; });
+    (completedDone ?? []).forEach(d => { counts[d.user_id] = (counts[d.user_id] || 0) + 1; });
     setDoneCounts(counts);
 
-    // Подсчёт по офферам: задание с картинкой vs без
     const taskTypeMap: Record<string, 'withImage' | 'noImage'> = {};
     (tasksData ?? []).forEach((t: any) => {
       const isImage = t.task_type === 'image' || !!t.image_url;
       taskTypeMap[t.id] = isImage ? 'withImage' : 'noImage';
     });
     const stats: Record<string, { withImage: number; noImage: number }> = {};
-    (completedAll ?? []).forEach((c: any) => {
+    (completedDone ?? []).forEach((c: any) => {
       const kind = taskTypeMap[c.task_id];
       if (!kind) return;
       if (!stats[c.user_id]) stats[c.user_id] = { withImage: 0, noImage: 0 };
       stats[c.user_id][kind] += 1;
     });
-    setOfferStats(stats);
+    setUnpaidOfferStats(stats);
   };
 
   const openHistory = async (profile: UserProfile) => {
@@ -402,48 +400,6 @@ export default function SuperAdmin() {
     });
   };
 
-  const exportDiscrepancies = () => {
-    const PRICE_IMAGE = 100;
-    const PRICE_TEXT = 70;
-    const lines = [
-      'email,display_name,current_balance,done_now,paid_now,total_now,expected_balance_done_only,diff(expected-current)',
-    ];
-    profiles.forEach(p => {
-      const stats = offerStats[p.user_id] || { withImage: 0, noImage: 0 };
-      const totalDoneAndPaid = stats.withImage + stats.noImage;
-      const doneOnly = doneCounts[p.user_id] || 0;
-      const paidOnly = Math.max(0, totalDoneAndPaid - doneOnly);
-      // ожидаемый баланс по done × средняя цена не известен точно; считаем по 20₽ как fallback и по миксу офферов
-      const expectedByMix = Math.round(
-        (stats.withImage * PRICE_IMAGE + stats.noImage * PRICE_TEXT) *
-          (doneOnly / Math.max(1, totalDoneAndPaid))
-      );
-      const diff = expectedByMix - Number(p.balance);
-      const safe = (s: any) => `"${String(s ?? '').replace(/"/g, '""')}"`;
-      lines.push(
-        [
-          safe(p.email),
-          safe(p.display_name),
-          p.balance,
-          doneOnly,
-          paidOnly,
-          totalDoneAndPaid,
-          expectedByMix,
-          diff,
-        ].join(',')
-      );
-    });
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `balance-discrepancies-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast({ title: 'CSV выгружен', description: 'Сравнение балансов сохранено' });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -539,106 +495,54 @@ export default function SuperAdmin() {
           <p className="text-xs text-destructive font-semibold">Удаление выключено: аккаунту vt@admin.com не выдана роль admin.</p>
         )}
 
-        {/* Аналитика по офферам */}
+        {/* Суммы по неоплаченным заданиям */}
         {(() => {
-          const PRICE_IMAGE = 100;
-          const PRICE_TEXT = 70;
-          const eligible = profiles
-            .map(p => {
-              const s = offerStats[p.user_id] || { withImage: 0, noImage: 0 };
-              const total = s.withImage + s.noImage;
-              return { profile: p, withImage: s.withImage, noImage: s.noImage, total };
-            })
-            .filter(x => x.total >= 10)
-            .sort((a, b) => (b.withImage * PRICE_IMAGE + b.noImage * PRICE_TEXT) - (a.withImage * PRICE_IMAGE + a.noImage * PRICE_TEXT));
+          const COMPANY_IMAGE_PRICE = 100;
+          const COMPANY_TEXT_PRICE = 70;
+          const USER_IMAGE_PRICE = 30;
+          const USER_TEXT_PRICE = 20;
 
-          const totalImage = eligible.reduce((s, x) => s + x.withImage, 0);
-          const totalText = eligible.reduce((s, x) => s + x.noImage, 0);
-          const totalPayout = totalImage * PRICE_IMAGE + totalText * PRICE_TEXT;
+          const totals = Object.values(unpaidOfferStats).reduce(
+            (acc, stat) => ({
+              withImage: acc.withImage + stat.withImage,
+              noImage: acc.noImage + stat.noImage,
+            }),
+            { withImage: 0, noImage: 0 }
+          );
+
+          const companyTotal = totals.withImage * COMPANY_IMAGE_PRICE + totals.noImage * COMPANY_TEXT_PRICE;
+          const userTotal = totals.withImage * USER_IMAGE_PRICE + totals.noImage * USER_TEXT_PRICE;
+          const taskTotal = totals.withImage + totals.noImage;
 
           return (
             <section className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <BarChart3 size={18} className="text-primary" />
-                <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
-                  Аналитика по офферам
-                </h2>
-              </div>
-              <p className="text-[10px] text-muted-foreground font-bold">
-                Только пользователи с 10+ выполненными заданиями ({eligible.length}).
-                Цены: с картинкой — {PRICE_IMAGE}₽, без картинки — {PRICE_TEXT}₽.
-              </p>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-primary/10 rounded-xl p-2 text-center">
-                  <ImageIcon size={14} className="text-primary mx-auto mb-1" />
-                  <p className="text-base font-black text-primary">{totalImage}</p>
-                  <p className="text-[8px] font-black text-muted-foreground uppercase">С картинкой</p>
-                  <p className="text-[9px] font-black text-primary mt-0.5">{totalImage * PRICE_IMAGE}₽</p>
-                </div>
-                <div className="bg-muted rounded-xl p-2 text-center">
-                  <FileText size={14} className="text-foreground mx-auto mb-1" />
-                  <p className="text-base font-black text-foreground">{totalText}</p>
-                  <p className="text-[8px] font-black text-muted-foreground uppercase">Без картинки</p>
-                  <p className="text-[9px] font-black text-foreground mt-0.5">{totalText * PRICE_TEXT}₽</p>
-                </div>
-                <div className="bg-accent/10 rounded-xl p-2 text-center">
-                  <Wallet size={14} className="text-accent mx-auto mb-1" />
-                  <p className="text-base font-black text-accent">{totalPayout}₽</p>
-                  <p className="text-[8px] font-black text-muted-foreground uppercase">Итого</p>
-                  <p className="text-[9px] font-black text-accent mt-0.5">{totalImage + totalText} зад.</p>
-                </div>
+              <div>
+                <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Неоплаченные задания</h2>
+                <p className="text-[10px] text-muted-foreground font-bold mt-1">
+                  Сразу видно две суммы: компании и на выплату юзерам.
+                </p>
               </div>
 
-              <div className="space-y-2 pt-1">
-                {eligible.length === 0 && (
-                  <p className="text-center text-muted-foreground text-xs py-2">
-                    Пока нет пользователей с 10+ заданиями
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-primary/10 rounded-2xl p-3">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase">Компания получает</p>
+                  <p className="text-xl font-black text-primary mt-1">{companyTotal}₽</p>
+                  <p className="text-[10px] font-bold text-muted-foreground mt-1">
+                    {totals.withImage} × 100₽ + {totals.noImage} × 70₽
                   </p>
-                )}
-                {eligible.map(({ profile, withImage, noImage, total }) => {
-                  const earned = withImage * PRICE_IMAGE + noImage * PRICE_TEXT;
-                  return (
-                    <div key={profile.user_id} className="bg-muted/50 rounded-xl p-3">
-                      <div className="flex justify-between items-start gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-black text-foreground truncate">
-                            {profile.display_name || 'Без имени'}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground font-semibold truncate">
-                            {profile.email || '—'}
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-base font-black text-accent">{earned}₽</p>
-                          <p className="text-[9px] font-black text-muted-foreground uppercase">
-                            всего: {total}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        <div className="bg-primary/10 rounded-lg px-2 py-1.5 flex items-center justify-between">
-                          <div className="flex items-center gap-1">
-                            <ImageIcon size={11} className="text-primary" />
-                            <span className="text-[10px] font-black text-primary uppercase">Картинка</span>
-                          </div>
-                          <span className="text-[11px] font-black text-primary">
-                            {withImage} × {PRICE_IMAGE} = {withImage * PRICE_IMAGE}₽
-                          </span>
-                        </div>
-                        <div className="bg-foreground/5 rounded-lg px-2 py-1.5 flex items-center justify-between">
-                          <div className="flex items-center gap-1">
-                            <FileText size={11} className="text-foreground" />
-                            <span className="text-[10px] font-black text-foreground uppercase">Текст</span>
-                          </div>
-                          <span className="text-[11px] font-black text-foreground">
-                            {noImage} × {PRICE_TEXT} = {noImage * PRICE_TEXT}₽
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                </div>
+                <div className="bg-accent/10 rounded-2xl p-3">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase">Юзерам выплатить</p>
+                  <p className="text-xl font-black text-accent mt-1">{userTotal}₽</p>
+                  <p className="text-[10px] font-bold text-muted-foreground mt-1">
+                    {totals.withImage} × 30₽ + {totals.noImage} × 20₽
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-muted/50 rounded-2xl p-3 flex items-center justify-between gap-3">
+                <p className="text-[10px] font-black text-muted-foreground uppercase">Всего неоплаченных заданий</p>
+                <p className="text-lg font-black text-foreground">{taskTotal}</p>
               </div>
             </section>
           );
@@ -816,15 +720,6 @@ export default function SuperAdmin() {
             </Button>
           </div>
         </section>
-
-        {/* Экспорт расхождений балансов */}
-        <Button
-          onClick={exportDiscrepancies}
-          variant="outline"
-          className="w-full font-black uppercase gap-2 rounded-2xl h-11"
-        >
-          <Download size={16} /> Экспорт расхождений (CSV)
-        </Button>
 
         {/* User list */}
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest pt-2">Все пользователи</h2>
