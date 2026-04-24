@@ -414,6 +414,24 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
             </div>
           </div>
+
+          {/* Кнопка "Привести друга" — только для авторизованных, не в демо */}
+          {!demoMode && (
+            <button
+              onClick={() => setShowReferral(true)}
+              className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-2xl px-4 py-3 flex items-center justify-between gap-3 active:scale-[0.98] transition-transform shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <Gift size={20} />
+                <span className="text-xs font-black uppercase tracking-wider">Привести друга за 30₽</span>
+              </div>
+              {referralStats.count > 0 && (
+                <span className="text-[10px] font-black bg-background/20 px-2 py-1 rounded-full">
+                  +{referralStats.earned}₽ · {referralStats.count}
+                </span>
+              )}
+            </button>
+          )}
         </div>
         {!demoMode && (
           <div className="flex gap-2 px-5 pb-4">
