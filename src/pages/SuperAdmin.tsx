@@ -495,106 +495,54 @@ export default function SuperAdmin() {
           <p className="text-xs text-destructive font-semibold">Удаление выключено: аккаунту vt@admin.com не выдана роль admin.</p>
         )}
 
-        {/* Аналитика по офферам */}
+        {/* Суммы по неоплаченным заданиям */}
         {(() => {
-          const PRICE_IMAGE = 100;
-          const PRICE_TEXT = 70;
-          const eligible = profiles
-            .map(p => {
-              const s = offerStats[p.user_id] || { withImage: 0, noImage: 0 };
-              const total = s.withImage + s.noImage;
-              return { profile: p, withImage: s.withImage, noImage: s.noImage, total };
-            })
-            .filter(x => x.total >= 10)
-            .sort((a, b) => (b.withImage * PRICE_IMAGE + b.noImage * PRICE_TEXT) - (a.withImage * PRICE_IMAGE + a.noImage * PRICE_TEXT));
+          const COMPANY_IMAGE_PRICE = 100;
+          const COMPANY_TEXT_PRICE = 70;
+          const USER_IMAGE_PRICE = 30;
+          const USER_TEXT_PRICE = 20;
 
-          const totalImage = eligible.reduce((s, x) => s + x.withImage, 0);
-          const totalText = eligible.reduce((s, x) => s + x.noImage, 0);
-          const totalPayout = totalImage * PRICE_IMAGE + totalText * PRICE_TEXT;
+          const totals = Object.values(unpaidOfferStats).reduce(
+            (acc, stat) => ({
+              withImage: acc.withImage + stat.withImage,
+              noImage: acc.noImage + stat.noImage,
+            }),
+            { withImage: 0, noImage: 0 }
+          );
+
+          const companyTotal = totals.withImage * COMPANY_IMAGE_PRICE + totals.noImage * COMPANY_TEXT_PRICE;
+          const userTotal = totals.withImage * USER_IMAGE_PRICE + totals.noImage * USER_TEXT_PRICE;
+          const taskTotal = totals.withImage + totals.noImage;
 
           return (
             <section className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <BarChart3 size={18} className="text-primary" />
-                <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
-                  Аналитика по офферам
-                </h2>
-              </div>
-              <p className="text-[10px] text-muted-foreground font-bold">
-                Только пользователи с 10+ выполненными заданиями ({eligible.length}).
-                Цены: с картинкой — {PRICE_IMAGE}₽, без картинки — {PRICE_TEXT}₽.
-              </p>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-primary/10 rounded-xl p-2 text-center">
-                  <ImageIcon size={14} className="text-primary mx-auto mb-1" />
-                  <p className="text-base font-black text-primary">{totalImage}</p>
-                  <p className="text-[8px] font-black text-muted-foreground uppercase">С картинкой</p>
-                  <p className="text-[9px] font-black text-primary mt-0.5">{totalImage * PRICE_IMAGE}₽</p>
-                </div>
-                <div className="bg-muted rounded-xl p-2 text-center">
-                  <FileText size={14} className="text-foreground mx-auto mb-1" />
-                  <p className="text-base font-black text-foreground">{totalText}</p>
-                  <p className="text-[8px] font-black text-muted-foreground uppercase">Без картинки</p>
-                  <p className="text-[9px] font-black text-foreground mt-0.5">{totalText * PRICE_TEXT}₽</p>
-                </div>
-                <div className="bg-accent/10 rounded-xl p-2 text-center">
-                  <Wallet size={14} className="text-accent mx-auto mb-1" />
-                  <p className="text-base font-black text-accent">{totalPayout}₽</p>
-                  <p className="text-[8px] font-black text-muted-foreground uppercase">Итого</p>
-                  <p className="text-[9px] font-black text-accent mt-0.5">{totalImage + totalText} зад.</p>
-                </div>
+              <div>
+                <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Неоплаченные задания</h2>
+                <p className="text-[10px] text-muted-foreground font-bold mt-1">
+                  Сразу видно две суммы: компании и на выплату юзерам.
+                </p>
               </div>
 
-              <div className="space-y-2 pt-1">
-                {eligible.length === 0 && (
-                  <p className="text-center text-muted-foreground text-xs py-2">
-                    Пока нет пользователей с 10+ заданиями
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-primary/10 rounded-2xl p-3">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase">Компания получает</p>
+                  <p className="text-xl font-black text-primary mt-1">{companyTotal}₽</p>
+                  <p className="text-[10px] font-bold text-muted-foreground mt-1">
+                    {totals.withImage} × 100₽ + {totals.noImage} × 70₽
                   </p>
-                )}
-                {eligible.map(({ profile, withImage, noImage, total }) => {
-                  const earned = withImage * PRICE_IMAGE + noImage * PRICE_TEXT;
-                  return (
-                    <div key={profile.user_id} className="bg-muted/50 rounded-xl p-3">
-                      <div className="flex justify-between items-start gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-black text-foreground truncate">
-                            {profile.display_name || 'Без имени'}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground font-semibold truncate">
-                            {profile.email || '—'}
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-base font-black text-accent">{earned}₽</p>
-                          <p className="text-[9px] font-black text-muted-foreground uppercase">
-                            всего: {total}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        <div className="bg-primary/10 rounded-lg px-2 py-1.5 flex items-center justify-between">
-                          <div className="flex items-center gap-1">
-                            <ImageIcon size={11} className="text-primary" />
-                            <span className="text-[10px] font-black text-primary uppercase">Картинка</span>
-                          </div>
-                          <span className="text-[11px] font-black text-primary">
-                            {withImage} × {PRICE_IMAGE} = {withImage * PRICE_IMAGE}₽
-                          </span>
-                        </div>
-                        <div className="bg-foreground/5 rounded-lg px-2 py-1.5 flex items-center justify-between">
-                          <div className="flex items-center gap-1">
-                            <FileText size={11} className="text-foreground" />
-                            <span className="text-[10px] font-black text-foreground uppercase">Текст</span>
-                          </div>
-                          <span className="text-[11px] font-black text-foreground">
-                            {noImage} × {PRICE_TEXT} = {noImage * PRICE_TEXT}₽
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                </div>
+                <div className="bg-accent/10 rounded-2xl p-3">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase">Юзерам выплатить</p>
+                  <p className="text-xl font-black text-accent mt-1">{userTotal}₽</p>
+                  <p className="text-[10px] font-bold text-muted-foreground mt-1">
+                    {totals.withImage} × 30₽ + {totals.noImage} × 20₽
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-muted/50 rounded-2xl p-3 flex items-center justify-between gap-3">
+                <p className="text-[10px] font-black text-muted-foreground uppercase">Всего неоплаченных заданий</p>
+                <p className="text-lg font-black text-foreground">{taskTotal}</p>
               </div>
             </section>
           );
@@ -772,15 +720,6 @@ export default function SuperAdmin() {
             </Button>
           </div>
         </section>
-
-        {/* Экспорт расхождений балансов */}
-        <Button
-          onClick={exportDiscrepancies}
-          variant="outline"
-          className="w-full font-black uppercase gap-2 rounded-2xl h-11"
-        >
-          <Download size={16} /> Экспорт расхождений (CSV)
-        </Button>
 
         {/* User list */}
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest pt-2">Все пользователи</h2>
