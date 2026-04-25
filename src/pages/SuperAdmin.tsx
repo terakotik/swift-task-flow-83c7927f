@@ -80,6 +80,7 @@ export default function SuperAdmin() {
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
   const [unpaidOfferStats, setUnpaidOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
+  const [bonusTotals, setBonusTotals] = useState<Record<string, number>>({});
   const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
@@ -166,11 +167,12 @@ export default function SuperAdmin() {
   };
 
   const loadData = useCallback(async () => {
-    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }] = await Promise.all([
+    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }, { data: balanceHistoryData }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
       supabase.from('completed_tasks').select('user_id, task_id').eq('status', 'done'),
+      supabase.from('balance_history').select('user_id, delta'),
     ]);
 
     if (profilesError || rolesError || tasksError) {
@@ -181,6 +183,15 @@ export default function SuperAdmin() {
     setProfiles(profilesData ?? []);
     setRoles(rolesData ?? []);
     setTasks(tasksData ?? []);
+
+    // Calculate bonus totals (positive deltas from manual adjustments) per user
+    const bonusTotals: Record<string, number> = {};
+    (balanceHistoryData ?? []).forEach((bh: any) => {
+      if (bh.delta > 0) {
+        bonusTotals[bh.user_id] = (bonusTotals[bh.user_id] || 0) + bh.delta;
+      }
+    });
+    setBonusTotals(bonusTotals);
 
     const counts: Record<string, number> = {};
     (completedDone ?? []).forEach(d => { counts[d.user_id] = (counts[d.user_id] || 0) + 1; });
@@ -885,6 +896,11 @@ export default function SuperAdmin() {
                   <p className="text-[9px] font-black text-muted-foreground uppercase mt-0.5">
                     Закрыто: {doneCounts[p.user_id] || 0}
                   </p>
+                  {bonusTotals[p.user_id] > 0 && (
+                    <p className="text-[9px] font-black text-primary uppercase mt-0.5">
+                      Бонус: +{bonusTotals[p.user_id]}₽
+                    </p>
+                  )}
                 </div>
               </div>
 
