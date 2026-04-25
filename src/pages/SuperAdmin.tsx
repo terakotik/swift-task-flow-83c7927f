@@ -81,6 +81,7 @@ export default function SuperAdmin() {
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
   const [unpaidOfferStats, setUnpaidOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
   const [bonusTotals, setBonusTotals] = useState<Record<string, number>>({});
+  const [weeklyStats, setWeeklyStats] = useState<Array<{ date: string; label: string; withImage: number; noImage: number; total: number; revenue: number }>>([]);
   const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
@@ -167,12 +168,16 @@ export default function SuperAdmin() {
   };
 
   const loadData = useCallback(async () => {
-    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }, { data: balanceHistoryData }] = await Promise.all([
+    const sinceDate = new Date();
+    sinceDate.setHours(0, 0, 0, 0);
+    sinceDate.setDate(sinceDate.getDate() - 6);
+    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }, { data: balanceHistoryData }, { data: completedWeek }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
       supabase.from('completed_tasks').select('user_id, task_id').eq('status', 'done'),
       supabase.from('balance_history').select('user_id, delta'),
+      supabase.from('completed_tasks').select('task_id, completed_at, status').in('status', ['done', 'paid']).gte('completed_at', sinceDate.toISOString()),
     ]);
 
     if (profilesError || rolesError || tasksError) {
@@ -210,6 +215,48 @@ export default function SuperAdmin() {
       stats[c.user_id][kind] += 1;
     });
     setUnpaidOfferStats(stats);
+
+    // Weekly stats: per-day completed tasks (last 7 days) + company revenue
+    const COMPANY_IMAGE_PRICE = 100;
+    const COMPANY_TEXT_PRICE = 70;
+    const days: Array<{ date: string; label: string; withImage: number; noImage: number; total: number; revenue: number }> = [];
+    const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    const buckets: Record<string, { withImage: number; noImage: number }> = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - i);
+      const key = dayKey(d);
+      buckets[key] = { withImage: 0, noImage: 0 };
+      days.push({
+        date: key,
+        label: `${weekdays[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`,
+        withImage: 0,
+        noImage: 0,
+        total: 0,
+        revenue: 0,
+      });
+    }
+    (completedWeek ?? []).forEach((c: any) => {
+      if (!c.completed_at) return;
+      const d = new Date(c.completed_at);
+      d.setHours(0, 0, 0, 0);
+      const key = dayKey(d);
+      if (!buckets[key]) return;
+      const kind = taskTypeMap[c.task_id];
+      if (kind === 'withImage') buckets[key].withImage += 1;
+      else if (kind === 'noImage') buckets[key].noImage += 1;
+      else buckets[key].noImage += 1;
+    });
+    days.forEach(day => {
+      const b = buckets[day.date];
+      day.withImage = b.withImage;
+      day.noImage = b.noImage;
+      day.total = b.withImage + b.noImage;
+      day.revenue = b.withImage * COMPANY_IMAGE_PRICE + b.noImage * COMPANY_TEXT_PRICE;
+    });
+    setWeeklyStats(days);
   }, [toast]);
 
   useEffect(() => {
@@ -584,6 +631,67 @@ export default function SuperAdmin() {
         {!canManageTasks && (
           <p className="text-xs text-destructive font-semibold">Удаление выключено: аккаунту vt@admin.com не выдана роль admin.</p>
         )}
+
+        {/* Задания за неделю */}
+        {(() => {
+          const weekTotal = weeklyStats.reduce((s, d) => s + d.total, 0);
+          const weekRevenue = weeklyStats.reduce((s, d) => s + d.revenue, 0);
+          const maxTotal = Math.max(1, ...weeklyStats.map(d => d.total));
+          return (
+            <section className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-3">
+              <div>
+                <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Задания за неделю</h2>
+                <p className="text-[10px] text-muted-foreground font-bold mt-1">
+                  Сколько заданий выполнено за день и сколько денег по цене клиента (100₽ с фото / 70₽ без).
+                </p>
+              </div>
+              <div className="overflow-x-auto -mx-1 px-1">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[10px] uppercase">День</TableHead>
+                      <TableHead className="text-center text-[10px] uppercase">Заданий</TableHead>
+                      <TableHead className="text-right text-[10px] uppercase">Доход</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {weeklyStats.map(d => {
+                      const isToday = d.date === weeklyStats[weeklyStats.length - 1]?.date;
+                      const widthPct = (d.total / maxTotal) * 100;
+                      return (
+                        <TableRow key={d.date} className={isToday ? 'bg-primary/5' : ''}>
+                          <TableCell className="font-black text-foreground py-2">
+                            <div className="flex flex-col">
+                              <span>{d.label}</span>
+                              {isToday && <span className="text-[9px] text-primary font-black uppercase">Сегодня</span>}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center py-2">
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="font-black text-foreground">{d.total}</span>
+                              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div className="h-full bg-primary rounded-full" style={{ width: `${widthPct}%` }} />
+                              </div>
+                              <span className="text-[9px] text-muted-foreground font-bold">📷{d.withImage} · 📝{d.noImage}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-black text-primary py-2">{d.revenue}₽</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="bg-muted/50 rounded-2xl p-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase">Итого за 7 дней</p>
+                  <p className="text-[10px] font-bold text-muted-foreground mt-0.5">{weekTotal} заданий</p>
+                </div>
+                <p className="text-lg font-black text-primary">{weekRevenue}₽</p>
+              </div>
+            </section>
+          );
+        })()}
 
         {/* Суммы по неоплаченным заданиям */}
         {(() => {
