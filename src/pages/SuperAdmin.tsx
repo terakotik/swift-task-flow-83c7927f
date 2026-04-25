@@ -1014,10 +1014,81 @@ export default function SuperAdmin() {
                   </div>
                 );
               })}
+
+              {!historyLoading && balanceHistoryItems.length > 0 && (
+                <>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pt-4 pb-1">
+                    Корректировки баланса
+                  </p>
+                  {balanceHistoryItems.map(bh => {
+                    const positive = Number(bh.delta) > 0;
+                    return (
+                      <div key={bh.id} className={`rounded-xl p-3 border ${positive ? 'bg-accent/5 border-accent/30' : 'bg-destructive/5 border-destructive/30'}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-black text-foreground">
+                              {bh.reason || 'Без пояснения'}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground font-bold">
+                              {new Date(bh.created_at).toLocaleString('ru-RU')} • Баланс стал {Number(bh.new_balance)}₽
+                            </p>
+                          </div>
+                          <span className={`text-sm font-black shrink-0 ${positive ? 'text-accent' : 'text-destructive'}`}>
+                            {positive ? '+' : ''}{Number(bh.delta)}₽
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
+
+      {/* Adjust balance reason dialog */}
+      <Dialog open={!!adjustDialog} onOpenChange={(open) => { if (!open) { setAdjustDialog(null); setAdjustReason(''); } }}>
+        <DialogContent className="rounded-2xl max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {adjustDialog && adjustDialog.delta > 0 ? `Зачислить ${adjustDialog.delta}₽` : `Списать ${Math.abs(adjustDialog?.delta || 0)}₽`}
+            </DialogTitle>
+            <DialogDescription>
+              {adjustDialog?.profile.display_name || adjustDialog?.profile.email || 'Пользователь'} • текущий баланс {adjustDialog?.profile.balance}₽
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+              Пояснение (увидит юзер в истории)
+            </label>
+            <Textarea
+              autoFocus
+              value={adjustReason}
+              onChange={(e) => setAdjustReason(e.target.value)}
+              placeholder="Например: бонус за активность, штраф за нарушение, доплата за заказ №123"
+              rows={3}
+              className="rounded-xl"
+            />
+            <div className="flex gap-2 justify-end pt-2">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => { setAdjustDialog(null); setAdjustReason(''); }}
+              >
+                Отмена
+              </Button>
+              <Button
+                className="rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 font-black"
+                disabled={!adjustReason.trim() || (adjustDialog ? adjustingId === adjustDialog.profile.user_id : false)}
+                onClick={() => adjustDialog && adjustBalance(adjustDialog.profile, adjustDialog.delta, adjustReason)}
+              >
+                Подтвердить
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
