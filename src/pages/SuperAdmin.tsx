@@ -238,13 +238,22 @@ export default function SuperAdmin() {
   const openHistory = async (profile: UserProfile) => {
     setHistoryUser(profile);
     setHistoryLoading(true);
-    const { data } = await supabase
-      .from('completed_tasks')
-      .select('id, order_number, status, user_id, task_id, completed_at, created_at, tasks(name)')
-      .eq('user_id', profile.user_id)
-      .in('status', ['done', 'paid'])
-      .order('completed_at', { ascending: false });
+    const [{ data }, { data: bh }] = await Promise.all([
+      supabase
+        .from('completed_tasks')
+        .select('id, order_number, status, user_id, task_id, completed_at, created_at, tasks(name)')
+        .eq('user_id', profile.user_id)
+        .in('status', ['done', 'paid'])
+        .order('completed_at', { ascending: false }),
+      supabase
+        .from('balance_history')
+        .select('id, delta, reason, created_at, new_balance')
+        .eq('user_id', profile.user_id)
+        .order('created_at', { ascending: false })
+        .limit(100),
+    ]);
     setHistoryItems((data as any) ?? []);
+    setBalanceHistoryItems((bh as any) ?? []);
     setHistoryLoading(false);
   };
 
