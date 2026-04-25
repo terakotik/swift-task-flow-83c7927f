@@ -166,11 +166,12 @@ export default function SuperAdmin() {
   };
 
   const loadData = useCallback(async () => {
-    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }] = await Promise.all([
+    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }, { data: balanceHistoryData }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
       supabase.from('completed_tasks').select('user_id, task_id').eq('status', 'done'),
+      supabase.from('balance_history').select('user_id, delta'),
     ]);
 
     if (profilesError || rolesError || tasksError) {
@@ -181,6 +182,15 @@ export default function SuperAdmin() {
     setProfiles(profilesData ?? []);
     setRoles(rolesData ?? []);
     setTasks(tasksData ?? []);
+
+    // Calculate bonus totals (positive deltas from manual adjustments) per user
+    const bonusTotals: Record<string, number> = {};
+    (balanceHistoryData ?? []).forEach((bh: any) => {
+      if (bh.delta > 0) {
+        bonusTotals[bh.user_id] = (bonusTotals[bh.user_id] || 0) + bh.delta;
+      }
+    });
+    setBonusTotals(bonusTotals);
 
     const counts: Record<string, number> = {};
     (completedDone ?? []).forEach(d => { counts[d.user_id] = (counts[d.user_id] || 0) + 1; });
