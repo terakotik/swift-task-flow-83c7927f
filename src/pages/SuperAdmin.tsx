@@ -902,7 +902,7 @@ export default function SuperAdmin() {
                   size="sm"
                   className="h-9 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 px-3"
                   disabled={adjustingId === p.user_id || !Number(adjustAmounts[p.user_id])}
-                  onClick={() => adjustBalance(p, Math.abs(Number(adjustAmounts[p.user_id]) || 0))}
+                  onClick={() => { setAdjustReason(''); setAdjustDialog({ profile: p, delta: Math.abs(Number(adjustAmounts[p.user_id]) || 0) }); }}
                 >
                   <Plus size={16} />
                 </Button>
