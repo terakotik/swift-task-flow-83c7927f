@@ -80,6 +80,7 @@ export default function SuperAdmin() {
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
   const [unpaidOfferStats, setUnpaidOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
+  const [bonusTotals, setBonusTotals] = useState<Record<string, number>>({});
   const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
