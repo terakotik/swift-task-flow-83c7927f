@@ -911,7 +911,7 @@ export default function SuperAdmin() {
                   variant="destructive"
                   className="h-9 rounded-xl px-3"
                   disabled={adjustingId === p.user_id || !Number(adjustAmounts[p.user_id])}
-                  onClick={() => adjustBalance(p, -Math.abs(Number(adjustAmounts[p.user_id]) || 0))}
+                  onClick={() => { setAdjustReason(''); setAdjustDialog({ profile: p, delta: -Math.abs(Number(adjustAmounts[p.user_id]) || 0) }); }}
                 >
                   <Minus size={16} />
                 </Button>
