@@ -95,6 +95,11 @@ export default function SuperAdmin() {
   const [mrPrice, setMrPrice] = useState<string>('20');
   const [mrOrders, setMrOrders] = useState<string>('');
   const [mrBusy, setMrBusy] = useState(false);
+  // Balance adjust dialog
+  const [adjustDialog, setAdjustDialog] = useState<{ profile: UserProfile; delta: number } | null>(null);
+  const [adjustReason, setAdjustReason] = useState('');
+  // Balance history items in user history modal
+  const [balanceHistoryItems, setBalanceHistoryItems] = useState<Array<{ id: string; delta: number; reason: string | null; created_at: string; new_balance: number }>>([]);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
