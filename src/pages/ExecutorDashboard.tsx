@@ -224,15 +224,24 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
 
   const loadCompletedTasks = async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from('completed_tasks')
-      .select('id, order_number, status, created_at, task_id, reject_reason, tasks(name, task_id)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    const [{ data }, { data: bh }] = await Promise.all([
+      supabase
+        .from('completed_tasks')
+        .select('id, order_number, status, created_at, task_id, reject_reason, tasks(name, task_id)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('balance_history')
+        .select('id, delta, reason, created_at, new_balance')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100),
+    ]);
     if (data) {
       setCompletedIds(new Set(data.map(d => d.task_id)));
       setMyCompleted(data as any);
     }
+    setBalanceHistory((bh as any) ?? []);
   };
 
   const copyText = (text: string) => {
