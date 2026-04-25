@@ -638,6 +638,37 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                 </div>
               );
             })}
+
+            {balanceHistory.length > 0 && (
+              <>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pt-4 pb-1">
+                  Корректировки баланса от админа
+                </p>
+                {balanceHistory.map(bh => {
+                  const positive = Number(bh.delta) > 0;
+                  return (
+                    <div
+                      key={bh.id}
+                      className={`p-4 rounded-2xl border shadow-sm ${positive ? 'bg-accent/5 border-accent/30' : 'bg-destructive/5 border-destructive/30'}`}
+                    >
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-foreground">
+                            {bh.reason || 'Без пояснения'}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground font-bold mt-1">
+                            {new Date(bh.created_at).toLocaleString('ru-RU')} • Баланс стал {Number(bh.new_balance)}₽
+                          </p>
+                        </div>
+                        <span className={`text-lg font-black shrink-0 ${positive ? 'text-accent' : 'text-destructive'}`}>
+                          {positive ? '+' : ''}{Number(bh.delta)}₽
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </>
         )}
       </main>
