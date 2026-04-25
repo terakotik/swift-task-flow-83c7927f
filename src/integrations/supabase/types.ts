@@ -317,6 +317,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_adjust_balance: {
+        Args: { _delta: number; _reason: string; _user_id: string }
+        Returns: Json
+      }
       generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {

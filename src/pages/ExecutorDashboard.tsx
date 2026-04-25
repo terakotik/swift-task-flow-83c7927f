@@ -140,6 +140,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<'Нет соуса' | 'Нет налички' | 'Платная доставка' | ''>('');
   const [sendingIssue, setSendingIssue] = useState(false);
+  const [balanceHistory, setBalanceHistory] = useState<Array<{ id: string; delta: number; reason: string | null; created_at: string; new_balance: number }>>([]);
 
   useEffect(() => {
     if (!demoMode) return;
@@ -223,15 +224,24 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
 
   const loadCompletedTasks = async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from('completed_tasks')
-      .select('id, order_number, status, created_at, task_id, reject_reason, tasks(name, task_id)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    const [{ data }, { data: bh }] = await Promise.all([
+      supabase
+        .from('completed_tasks')
+        .select('id, order_number, status, created_at, task_id, reject_reason, tasks(name, task_id)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('balance_history')
+        .select('id, delta, reason, created_at, new_balance')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100),
+    ]);
     if (data) {
       setCompletedIds(new Set(data.map(d => d.task_id)));
       setMyCompleted(data as any);
     }
+    setBalanceHistory((bh as any) ?? []);
   };
 
   const copyText = (text: string) => {
@@ -628,6 +638,37 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                 </div>
               );
             })}
+
+            {balanceHistory.length > 0 && (
+              <>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pt-4 pb-1">
+                  Корректировки баланса от админа
+                </p>
+                {balanceHistory.map(bh => {
+                  const positive = Number(bh.delta) > 0;
+                  return (
+                    <div
+                      key={bh.id}
+                      className={`p-4 rounded-2xl border shadow-sm ${positive ? 'bg-accent/5 border-accent/30' : 'bg-destructive/5 border-destructive/30'}`}
+                    >
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-foreground">
+                            {bh.reason || 'Без пояснения'}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground font-bold mt-1">
+                            {new Date(bh.created_at).toLocaleString('ru-RU')} • Баланс стал {Number(bh.new_balance)}₽
+                          </p>
+                        </div>
+                        <span className={`text-lg font-black shrink-0 ${positive ? 'text-accent' : 'text-destructive'}`}>
+                          {positive ? '+' : ''}{Number(bh.delta)}₽
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </>
         )}
       </main>

@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, Archive, Undo2, Wrench } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
@@ -94,6 +95,11 @@ export default function SuperAdmin() {
   const [mrPrice, setMrPrice] = useState<string>('20');
   const [mrOrders, setMrOrders] = useState<string>('');
   const [mrBusy, setMrBusy] = useState(false);
+  // Balance adjust dialog
+  const [adjustDialog, setAdjustDialog] = useState<{ profile: UserProfile; delta: number } | null>(null);
+  const [adjustReason, setAdjustReason] = useState('');
+  // Balance history items in user history modal
+  const [balanceHistoryItems, setBalanceHistoryItems] = useState<Array<{ id: string; delta: number; reason: string | null; created_at: string; new_balance: number }>>([]);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
@@ -232,13 +238,22 @@ export default function SuperAdmin() {
   const openHistory = async (profile: UserProfile) => {
     setHistoryUser(profile);
     setHistoryLoading(true);
-    const { data } = await supabase
-      .from('completed_tasks')
-      .select('id, order_number, status, user_id, task_id, completed_at, created_at, tasks(name)')
-      .eq('user_id', profile.user_id)
-      .in('status', ['done', 'paid'])
-      .order('completed_at', { ascending: false });
+    const [{ data }, { data: bh }] = await Promise.all([
+      supabase
+        .from('completed_tasks')
+        .select('id, order_number, status, user_id, task_id, completed_at, created_at, tasks(name)')
+        .eq('user_id', profile.user_id)
+        .in('status', ['done', 'paid'])
+        .order('completed_at', { ascending: false }),
+      supabase
+        .from('balance_history')
+        .select('id, delta, reason, created_at, new_balance')
+        .eq('user_id', profile.user_id)
+        .order('created_at', { ascending: false })
+        .limit(100),
+    ]);
     setHistoryItems((data as any) ?? []);
+    setBalanceHistoryItems((bh as any) ?? []);
     setHistoryLoading(false);
   };
 
@@ -329,31 +344,43 @@ export default function SuperAdmin() {
     });
   };
 
-  const adjustBalance = async (profile: UserProfile, delta: number) => {
+  const adjustBalance = async (profile: UserProfile, delta: number, reason: string) => {
     if (!isAdmin && !currentUserIsAdmin) {
       toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
       return;
     }
-    const newBalance = Number(profile.balance) + delta;
-    if (newBalance < 0) {
-      toast({ title: 'Ошибка', description: 'Баланс не может быть отрицательным', variant: 'destructive' });
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      toast({ title: 'Укажите пояснение', description: 'Пользователь должен видеть, за что начислено/списано', variant: 'destructive' });
       return;
     }
     setAdjustingId(profile.user_id);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ balance: newBalance })
-      .eq('user_id', profile.user_id);
+    const { data, error } = await supabase.rpc('admin_adjust_balance', {
+      _user_id: profile.user_id,
+      _delta: delta,
+      _reason: trimmed,
+    });
     setAdjustingId(null);
     if (error) {
       toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
       return;
     }
+    const result = data as { ok: boolean; error?: string; new_balance?: number };
+    if (!result?.ok) {
+      const msg = result?.error === 'negative_balance' ? 'Баланс не может быть отрицательным' :
+                  result?.error === 'forbidden' ? 'Нет прав' :
+                  result?.error || 'Не удалось обновить баланс';
+      toast({ title: 'Ошибка', description: msg, variant: 'destructive' });
+      return;
+    }
+    const newBalance = Number(result.new_balance ?? 0);
     setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: newBalance } : p));
     setAdjustAmounts(prev => ({ ...prev, [profile.user_id]: '' }));
+    setAdjustDialog(null);
+    setAdjustReason('');
     toast({
       title: delta > 0 ? `+${delta}₽ начислено` : `${delta}₽ списано`,
-      description: `${profile.display_name || profile.email || 'Пользователь'} • новый баланс ${newBalance}₽`,
+      description: `${profile.display_name || profile.email || 'Пользователь'} • ${trimmed} • баланс ${newBalance}₽`,
     });
   };
 
@@ -875,7 +902,7 @@ export default function SuperAdmin() {
                   size="sm"
                   className="h-9 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 px-3"
                   disabled={adjustingId === p.user_id || !Number(adjustAmounts[p.user_id])}
-                  onClick={() => adjustBalance(p, Math.abs(Number(adjustAmounts[p.user_id]) || 0))}
+                  onClick={() => { setAdjustReason(''); setAdjustDialog({ profile: p, delta: Math.abs(Number(adjustAmounts[p.user_id]) || 0) }); }}
                 >
                   <Plus size={16} />
                 </Button>
@@ -884,7 +911,7 @@ export default function SuperAdmin() {
                   variant="destructive"
                   className="h-9 rounded-xl px-3"
                   disabled={adjustingId === p.user_id || !Number(adjustAmounts[p.user_id])}
-                  onClick={() => adjustBalance(p, -Math.abs(Number(adjustAmounts[p.user_id]) || 0))}
+                  onClick={() => { setAdjustReason(''); setAdjustDialog({ profile: p, delta: -Math.abs(Number(adjustAmounts[p.user_id]) || 0) }); }}
                 >
                   <Minus size={16} />
                 </Button>
@@ -987,10 +1014,81 @@ export default function SuperAdmin() {
                   </div>
                 );
               })}
+
+              {!historyLoading && balanceHistoryItems.length > 0 && (
+                <>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pt-4 pb-1">
+                    Корректировки баланса
+                  </p>
+                  {balanceHistoryItems.map(bh => {
+                    const positive = Number(bh.delta) > 0;
+                    return (
+                      <div key={bh.id} className={`rounded-xl p-3 border ${positive ? 'bg-accent/5 border-accent/30' : 'bg-destructive/5 border-destructive/30'}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-black text-foreground">
+                              {bh.reason || 'Без пояснения'}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground font-bold">
+                              {new Date(bh.created_at).toLocaleString('ru-RU')} • Баланс стал {Number(bh.new_balance)}₽
+                            </p>
+                          </div>
+                          <span className={`text-sm font-black shrink-0 ${positive ? 'text-accent' : 'text-destructive'}`}>
+                            {positive ? '+' : ''}{Number(bh.delta)}₽
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
+
+      {/* Adjust balance reason dialog */}
+      <Dialog open={!!adjustDialog} onOpenChange={(open) => { if (!open) { setAdjustDialog(null); setAdjustReason(''); } }}>
+        <DialogContent className="rounded-2xl max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {adjustDialog && adjustDialog.delta > 0 ? `Зачислить ${adjustDialog.delta}₽` : `Списать ${Math.abs(adjustDialog?.delta || 0)}₽`}
+            </DialogTitle>
+            <DialogDescription>
+              {adjustDialog?.profile.display_name || adjustDialog?.profile.email || 'Пользователь'} • текущий баланс {adjustDialog?.profile.balance}₽
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+              Пояснение (увидит юзер в истории)
+            </label>
+            <Textarea
+              autoFocus
+              value={adjustReason}
+              onChange={(e) => setAdjustReason(e.target.value)}
+              placeholder="Например: бонус за активность, штраф за нарушение, доплата за заказ №123"
+              rows={3}
+              className="rounded-xl"
+            />
+            <div className="flex gap-2 justify-end pt-2">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => { setAdjustDialog(null); setAdjustReason(''); }}
+              >
+                Отмена
+              </Button>
+              <Button
+                className="rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 font-black"
+                disabled={!adjustReason.trim() || (adjustDialog ? adjustingId === adjustDialog.profile.user_id : false)}
+                onClick={() => adjustDialog && adjustBalance(adjustDialog.profile, adjustDialog.delta, adjustReason)}
+              >
+                Подтвердить
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
