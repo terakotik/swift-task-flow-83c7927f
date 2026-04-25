@@ -344,31 +344,43 @@ export default function SuperAdmin() {
     });
   };
 
-  const adjustBalance = async (profile: UserProfile, delta: number) => {
+  const adjustBalance = async (profile: UserProfile, delta: number, reason: string) => {
     if (!isAdmin && !currentUserIsAdmin) {
       toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
       return;
     }
-    const newBalance = Number(profile.balance) + delta;
-    if (newBalance < 0) {
-      toast({ title: 'Ошибка', description: 'Баланс не может быть отрицательным', variant: 'destructive' });
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      toast({ title: 'Укажите пояснение', description: 'Пользователь должен видеть, за что начислено/списано', variant: 'destructive' });
       return;
     }
     setAdjustingId(profile.user_id);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ balance: newBalance })
-      .eq('user_id', profile.user_id);
+    const { data, error } = await supabase.rpc('admin_adjust_balance', {
+      _user_id: profile.user_id,
+      _delta: delta,
+      _reason: trimmed,
+    });
     setAdjustingId(null);
     if (error) {
       toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
       return;
     }
+    const result = data as { ok: boolean; error?: string; new_balance?: number };
+    if (!result?.ok) {
+      const msg = result?.error === 'negative_balance' ? 'Баланс не может быть отрицательным' :
+                  result?.error === 'forbidden' ? 'Нет прав' :
+                  result?.error || 'Не удалось обновить баланс';
+      toast({ title: 'Ошибка', description: msg, variant: 'destructive' });
+      return;
+    }
+    const newBalance = Number(result.new_balance ?? 0);
     setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: newBalance } : p));
     setAdjustAmounts(prev => ({ ...prev, [profile.user_id]: '' }));
+    setAdjustDialog(null);
+    setAdjustReason('');
     toast({
       title: delta > 0 ? `+${delta}₽ начислено` : `${delta}₽ списано`,
-      description: `${profile.display_name || profile.email || 'Пользователь'} • новый баланс ${newBalance}₽`,
+      description: `${profile.display_name || profile.email || 'Пользователь'} • ${trimmed} • баланс ${newBalance}₽`,
     });
   };
 
