@@ -874,7 +874,7 @@ export default function SuperAdmin() {
 
         {/* User list */}
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest pt-2">Все пользователи</h2>
-        {profiles.map(p => {
+        {[...profiles].sort((a, b) => Number(b.balance) - Number(a.balance)).map(p => {
           const role = getUserRole(p.user_id);
           return (
             <div key={p.user_id} className="bg-card p-4 rounded-2xl border border-border shadow-sm space-y-3">
