@@ -215,6 +215,48 @@ export default function SuperAdmin() {
       stats[c.user_id][kind] += 1;
     });
     setUnpaidOfferStats(stats);
+
+    // Weekly stats: per-day completed tasks (last 7 days) + company revenue
+    const COMPANY_IMAGE_PRICE = 100;
+    const COMPANY_TEXT_PRICE = 70;
+    const days: Array<{ date: string; label: string; withImage: number; noImage: number; total: number; revenue: number }> = [];
+    const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    const buckets: Record<string, { withImage: number; noImage: number }> = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - i);
+      const key = dayKey(d);
+      buckets[key] = { withImage: 0, noImage: 0 };
+      days.push({
+        date: key,
+        label: `${weekdays[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`,
+        withImage: 0,
+        noImage: 0,
+        total: 0,
+        revenue: 0,
+      });
+    }
+    (completedWeek ?? []).forEach((c: any) => {
+      if (!c.completed_at) return;
+      const d = new Date(c.completed_at);
+      d.setHours(0, 0, 0, 0);
+      const key = dayKey(d);
+      if (!buckets[key]) return;
+      const kind = taskTypeMap[c.task_id];
+      if (kind === 'withImage') buckets[key].withImage += 1;
+      else if (kind === 'noImage') buckets[key].noImage += 1;
+      else buckets[key].noImage += 1;
+    });
+    days.forEach(day => {
+      const b = buckets[day.date];
+      day.withImage = b.withImage;
+      day.noImage = b.noImage;
+      day.total = b.withImage + b.noImage;
+      day.revenue = b.withImage * COMPANY_IMAGE_PRICE + b.noImage * COMPANY_TEXT_PRICE;
+    });
+    setWeeklyStats(days);
   }, [toast]);
 
   useEffect(() => {
