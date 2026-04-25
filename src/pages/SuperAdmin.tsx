@@ -896,6 +896,11 @@ export default function SuperAdmin() {
                   <p className="text-[9px] font-black text-muted-foreground uppercase mt-0.5">
                     Закрыто: {doneCounts[p.user_id] || 0}
                   </p>
+                  {bonusTotals[p.user_id] > 0 && (
+                    <p className="text-[9px] font-black text-primary uppercase mt-0.5">
+                      Бонус: +{bonusTotals[p.user_id]}₽
+                    </p>
+                  )}
                 </div>
               </div>
 
