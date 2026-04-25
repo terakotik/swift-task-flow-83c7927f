@@ -81,6 +81,7 @@ export default function SuperAdmin() {
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
   const [unpaidOfferStats, setUnpaidOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
   const [bonusTotals, setBonusTotals] = useState<Record<string, number>>({});
+  const [weeklyStats, setWeeklyStats] = useState<Array<{ date: string; label: string; withImage: number; noImage: number; total: number; revenue: number }>>([]);
   const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [historyItems, setHistoryItems] = useState<CompletedTaskRow[]>([]);
