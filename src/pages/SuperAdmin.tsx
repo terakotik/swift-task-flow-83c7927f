@@ -176,7 +176,7 @@ export default function SuperAdmin() {
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
       supabase.from('completed_tasks').select('user_id, task_id').eq('status', 'done'),
-      supabase.from('balance_history').select('user_id, delta'),
+      supabase.from('balance_history').select('user_id, delta, reason'),
       supabase.from('completed_tasks').select('task_id, completed_at, status').in('status', ['done', 'paid']).gte('completed_at', sinceDate.toISOString()),
     ]);
 
