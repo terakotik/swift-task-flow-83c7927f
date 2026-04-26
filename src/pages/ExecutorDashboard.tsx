@@ -234,6 +234,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
         .from('balance_history')
         .select('id, delta, reason, created_at, new_balance')
         .eq('user_id', user.id)
+        .not('reason', 'is', null)
         .order('created_at', { ascending: false })
         .limit(100),
     ]);
