@@ -378,37 +378,56 @@ export default function SuperAdmin() {
       : `Баланс 0₽, но осталось ${activeDone} незакрытых заданий. Архивировать их как выплаченные?`;
     if (!confirm(confirmMsg)) return;
     setAdjustingId(profile.user_id);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ balance: 0 })
-      .eq('user_id', profile.user_id);
-    if (!error) {
-      await supabase
-        .from('completed_tasks')
-        .update({ status: 'paid' })
-        .eq('user_id', profile.user_id)
-        .eq('status', 'done');
+    const payoutAmount = Number(profile.balance) || 0;
 
-      // Реферальная выплата: если у юзера есть пригласивший и это первая выплата — начислить 30₽
-      const { data: refRes } = await supabase.rpc('process_referral_payout', { _user_id: profile.user_id });
-      const r = refRes as any;
-      if (r?.ok && r?.rewarded) {
+    // Обнуляем баланс через защищённую RPC (она проверит роль admin и запишет причину в balance_history)
+    if (payoutAmount > 0) {
+      const { data: adjData, error: adjError } = await supabase.rpc('admin_adjust_balance', {
+        _user_id: profile.user_id,
+        _delta: -payoutAmount,
+        _reason: `Выплата ${payoutAmount}₽`,
+      });
+      const adj = adjData as any;
+      if (adjError || !adj?.ok) {
+        setAdjustingId(null);
         toast({
-          title: '🎁 Реферальный бонус начислен',
-          description: `Пригласившему +${r.amount}₽ за приведённого друга`,
+          title: 'Ошибка выплаты',
+          description: adjError?.message || adj?.error || 'Не удалось обнулить баланс. Проверьте права admin.',
+          variant: 'destructive',
         });
+        return;
       }
     }
-    setAdjustingId(null);
-    if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+
+    // Помечаем все done-задания как paid
+    const { error: tasksError } = await supabase
+      .from('completed_tasks')
+      .update({ status: 'paid' })
+      .eq('user_id', profile.user_id)
+      .eq('status', 'done');
+    if (tasksError) {
+      setAdjustingId(null);
+      toast({ title: 'Ошибка обновления заданий', description: tasksError.message, variant: 'destructive' });
       return;
     }
+
+    // Реферальная выплата: если у юзера есть пригласивший и это первая выплата — начислить 30₽
+    const { data: refRes } = await supabase.rpc('process_referral_payout', { _user_id: profile.user_id });
+    const r = refRes as any;
+    if (r?.ok && r?.rewarded) {
+      toast({
+        title: '🎁 Реферальный бонус начислен',
+        description: `Пригласившему +${r.amount}₽ за приведённого друга`,
+      });
+    }
+
+    setAdjustingId(null);
     setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: 0 } : p));
     setDoneCounts(prev => ({ ...prev, [profile.user_id]: 0 }));
+    await loadData();
     toast({
       title: 'Выплата проведена',
-      description: `${profile.display_name || profile.email || 'Пользователь'} • выплата ${profile.balance}₽ зафиксирована`,
+      description: `${profile.display_name || profile.email || 'Пользователь'} • выплата ${payoutAmount}₽ зафиксирована`,
     });
   };
 
