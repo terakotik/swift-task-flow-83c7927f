@@ -81,6 +81,7 @@ export default function SuperAdmin() {
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
   const [unpaidOfferStats, setUnpaidOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
   const [bonusTotals, setBonusTotals] = useState<Record<string, number>>({});
+  const [taskEarningTotals, setTaskEarningTotals] = useState<Record<string, number>>({});
   const [weeklyStats, setWeeklyStats] = useState<Array<{ date: string; label: string; withImage: number; noImage: number; total: number; revenue: number }>>([]);
   const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
   const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
@@ -189,18 +190,22 @@ export default function SuperAdmin() {
     setRoles(rolesData ?? []);
     setTasks(tasksData ?? []);
 
-    // Calculate bonus totals — only true manual adjustments (admin_adjust_balance always sets a reason).
-    // Exclude task payouts (no reason) and referral bonuses (reason starts with 'referral_bonus:').
+    // Разделяем начисления: без пояснения — это выплаты за задания, с пояснением — ручной бонус/корректировка.
     const bonusTotals: Record<string, number> = {};
+    const taskEarningTotals: Record<string, number> = {};
     (balanceHistoryData ?? []).forEach((bh: any) => {
       const reason = (bh.reason ?? '').toString().trim();
-      if (!reason) return;
-      if (reason.startsWith('referral_bonus:')) return;
-      if (bh.delta > 0) {
-        bonusTotals[bh.user_id] = (bonusTotals[bh.user_id] || 0) + Number(bh.delta);
+      const delta = Number(bh.delta) || 0;
+      if (delta <= 0) return;
+      if (!reason) {
+        taskEarningTotals[bh.user_id] = (taskEarningTotals[bh.user_id] || 0) + delta;
+        return;
       }
+      if (reason.startsWith('referral_bonus:')) return;
+      bonusTotals[bh.user_id] = (bonusTotals[bh.user_id] || 0) + delta;
     });
     setBonusTotals(bonusTotals);
+    setTaskEarningTotals(taskEarningTotals);
 
     const counts: Record<string, number> = {};
     (completedDone ?? []).forEach(d => { counts[d.user_id] = (counts[d.user_id] || 0) + 1; });
@@ -311,6 +316,7 @@ export default function SuperAdmin() {
         .from('balance_history')
         .select('id, delta, reason, created_at, new_balance')
         .eq('user_id', profile.user_id)
+        .not('reason', 'is', null)
         .order('created_at', { ascending: false })
         .limit(100),
     ]);
@@ -1008,6 +1014,11 @@ export default function SuperAdmin() {
                   <p className="text-[9px] font-black text-muted-foreground uppercase mt-0.5">
                     Закрыто: {doneCounts[p.user_id] || 0}
                   </p>
+                  {taskEarningTotals[p.user_id] > 0 && (
+                    <p className="text-[9px] font-black text-accent uppercase mt-0.5">
+                      Задания: +{taskEarningTotals[p.user_id]}₽
+                    </p>
+                  )}
                   {bonusTotals[p.user_id] > 0 && (
                     <p className="text-[9px] font-black text-primary uppercase mt-0.5">
                       Бонус: +{bonusTotals[p.user_id]}₽
