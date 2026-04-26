@@ -176,7 +176,7 @@ export default function SuperAdmin() {
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
       supabase.from('completed_tasks').select('user_id, task_id').eq('status', 'done'),
-      supabase.from('balance_history').select('user_id, delta'),
+      supabase.from('balance_history').select('user_id, delta, reason'),
       supabase.from('completed_tasks').select('task_id, completed_at, status').in('status', ['done', 'paid']).gte('completed_at', sinceDate.toISOString()),
     ]);
 
@@ -189,11 +189,15 @@ export default function SuperAdmin() {
     setRoles(rolesData ?? []);
     setTasks(tasksData ?? []);
 
-    // Calculate bonus totals (positive deltas from manual adjustments) per user
+    // Calculate bonus totals — only true manual adjustments (admin_adjust_balance always sets a reason).
+    // Exclude task payouts (no reason) and referral bonuses (reason starts with 'referral_bonus:').
     const bonusTotals: Record<string, number> = {};
     (balanceHistoryData ?? []).forEach((bh: any) => {
+      const reason = (bh.reason ?? '').toString().trim();
+      if (!reason) return;
+      if (reason.startsWith('referral_bonus:')) return;
       if (bh.delta > 0) {
-        bonusTotals[bh.user_id] = (bonusTotals[bh.user_id] || 0) + bh.delta;
+        bonusTotals[bh.user_id] = (bonusTotals[bh.user_id] || 0) + Number(bh.delta);
       }
     });
     setBonusTotals(bonusTotals);
