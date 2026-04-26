@@ -316,6 +316,7 @@ export default function SuperAdmin() {
         .from('balance_history')
         .select('id, delta, reason, created_at, new_balance')
         .eq('user_id', profile.user_id)
+        .not('reason', 'is', null)
         .order('created_at', { ascending: false })
         .limit(100),
     ]);
