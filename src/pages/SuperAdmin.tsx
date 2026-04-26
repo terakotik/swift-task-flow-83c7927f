@@ -189,11 +189,15 @@ export default function SuperAdmin() {
     setRoles(rolesData ?? []);
     setTasks(tasksData ?? []);
 
-    // Calculate bonus totals (positive deltas from manual adjustments) per user
+    // Calculate bonus totals — only true manual adjustments (admin_adjust_balance always sets a reason).
+    // Exclude task payouts (no reason) and referral bonuses (reason starts with 'referral_bonus:').
     const bonusTotals: Record<string, number> = {};
     (balanceHistoryData ?? []).forEach((bh: any) => {
+      const reason = (bh.reason ?? '').toString().trim();
+      if (!reason) return;
+      if (reason.startsWith('referral_bonus:')) return;
       if (bh.delta > 0) {
-        bonusTotals[bh.user_id] = (bonusTotals[bh.user_id] || 0) + bh.delta;
+        bonusTotals[bh.user_id] = (bonusTotals[bh.user_id] || 0) + Number(bh.delta);
       }
     });
     setBonusTotals(bonusTotals);
