@@ -505,17 +505,42 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
             </div>
           </div>
 
-          {/* Balance Card */}
-          <div className="bg-accent/10 rounded-2xl p-4 flex items-center justify-between mb-3">
-            <div>
-              <p className="text-[10px] font-black text-accent uppercase tracking-widest">Ваш баланс</p>
-              <p className="text-3xl font-black text-accent">{balance}₽</p>
+          {/* Balance Card — открывает кошелёк */}
+          {!demoMode ? (
+            <button
+              type="button"
+              onClick={() => setShowWallet(true)}
+              className="w-full bg-accent/10 hover:bg-accent/15 rounded-2xl p-4 flex items-center justify-between mb-3 active:scale-[0.99] transition-all border border-accent/20 text-left"
+            >
+              <div>
+                <p className="text-[10px] font-black text-accent uppercase tracking-widest flex items-center gap-1">
+                  <Wallet size={11} /> Мой кошелёк
+                </p>
+                <p className="text-3xl font-black text-accent">{balance}₽</p>
+                {hasPendingPayout && (
+                  <p className="text-[9px] font-black text-warning uppercase mt-0.5">⏳ Заявка в обработке</p>
+                )}
+              </div>
+              <div className="text-right flex items-center gap-2">
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Активно заданий</p>
+                  <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
+                </div>
+                <ChevronRight className="text-muted-foreground" size={20} />
+              </div>
+            </button>
+          ) : (
+            <div className="bg-accent/10 rounded-2xl p-4 flex items-center justify-between mb-3">
+              <div>
+                <p className="text-[10px] font-black text-accent uppercase tracking-widest">Ваш баланс</p>
+                <p className="text-3xl font-black text-accent">{balance}₽</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Активных заданий</p>
+                <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Активных заданий</p>
-              <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
-            </div>
-          </div>
+          )}
 
           {/* Кнопка "Привести друга" — только для авторизованных, не в демо */}
           {!demoMode && (
