@@ -685,7 +685,7 @@ export default function AdminDashboard() {
                     {pendingIssues.length}
                   </span>
                 )}
-                {tab === 'pending' ? 'Заявки' : tab === 'done' ? 'Готовые' : tab === 'mytasks' ? 'Задания' : tab === 'users' ? 'Юзеры' : tab === 'issues' ? 'Проблемы' : 'Архив'}
+                {tab === 'pending' ? 'Заявки' : tab === 'done' ? 'Готовые' : tab === 'mytasks' ? 'Задания' : tab === 'users' ? 'Юзеры' : tab === 'issues' ? 'Вопросы' : 'Архив'}
               </button>
             );
           })}
