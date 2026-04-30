@@ -142,6 +142,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const [selectedIssue, setSelectedIssue] = useState<'Нет соуса' | 'Нет налички' | 'Платная доставка' | ''>('');
   const [sendingIssue, setSendingIssue] = useState(false);
   const [balanceHistory, setBalanceHistory] = useState<Array<{ id: string; delta: number; reason: string | null; created_at: string; new_balance: number }>>([]);
+  const [showWallet, setShowWallet] = useState(false);
+  const [hasPendingPayout, setHasPendingPayout] = useState(false);
 
   useEffect(() => {
     if (!demoMode) return;
