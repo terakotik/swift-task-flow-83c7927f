@@ -716,6 +716,16 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
         </div>
       )}
 
+      {/* Wallet Panel (CPA-style) */}
+      {showWallet && user && (
+        <WalletPanel
+          userId={user.id}
+          balance={balance}
+          onClose={() => setShowWallet(false)}
+          onBalanceChanged={() => { loadProfile(); }}
+        />
+      )}
+
       {/* Settings Modal */}
       {showSettings && user && (
         <div className="fixed inset-0 z-50">
