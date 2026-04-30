@@ -212,11 +212,6 @@ export default function AdminDashboard() {
     };
   }, []);
 
-  // Persist mute setting
-  useEffect(() => {
-    localStorage.setItem('admin_sound_muted', muted ? '1' : '0');
-  }, [muted]);
-
   // Sound + title badge for new pending issues (questions)
   useEffect(() => {
     const pendingCount = issueReports.filter(i => i.status === 'pending').length;
@@ -227,7 +222,7 @@ export default function AdminDashboard() {
 
     // Play sound only if count increased (new issue arrived) and not on first load
     const prev = prevIssueCountRef.current;
-    if (prev > 0 && pendingCount > prev && !muted) {
+    if (prev > 0 && pendingCount > prev) {
       try {
         if (!audioCtxRef.current) {
           const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
@@ -254,7 +249,7 @@ export default function AdminDashboard() {
       }
     }
     prevIssueCountRef.current = pendingCount;
-  }, [issueReports, muted]);
+  }, [issueReports]);
 
   const loadAllTasks = async () => {
     const { data } = await supabase
