@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban, Tag, Filter, Check } from 'lucide-react';
+import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban, Tag, Filter, Check, Volume2, VolumeX } from 'lucide-react';
 
 interface CompletedTask {
   id: string;
@@ -116,6 +116,9 @@ export default function AdminDashboard() {
   const [historyUser, setHistoryUser] = useState<{ user_id: string; name: string } | null>(null);
   const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string; status: string; task_type?: string; image_url?: string | null }>>([]);
   const [issueReports, setIssueReports] = useState<OrderIssueReport[]>([]);
+  const [muted, setMuted] = useState<boolean>(() => localStorage.getItem('admin_sound_muted') === '1');
+  const prevIssueCountRef = useRef<number>(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Reject flow
   const [rejectTarget, setRejectTarget] = useState<CompletedTaskWithProfile | null>(null);
@@ -209,6 +212,50 @@ export default function AdminDashboard() {
       supabase.removeChannel(issueReportsChannel);
     };
   }, []);
+
+  // Persist mute setting
+  useEffect(() => {
+    localStorage.setItem('admin_sound_muted', muted ? '1' : '0');
+  }, [muted]);
+
+  // Sound + title badge for new pending issues (questions)
+  useEffect(() => {
+    const pendingCount = issueReports.filter(i => i.status === 'pending').length;
+
+    // Update browser tab title
+    const baseTitle = 'Админ-панель';
+    document.title = pendingCount > 0 ? `(${pendingCount}) ${baseTitle} · Вопросы` : baseTitle;
+
+    // Play sound only if count increased (new issue arrived) and not on first load
+    const prev = prevIssueCountRef.current;
+    if (prev > 0 && pendingCount > prev && !muted) {
+      try {
+        if (!audioCtxRef.current) {
+          const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
+          audioCtxRef.current = new Ctx();
+        }
+        const ctx = audioCtxRef.current!;
+        if (ctx.state === 'suspended') ctx.resume();
+        const now = ctx.currentTime;
+        // Two-tone "ding"
+        [880, 1320].forEach((freq, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = freq;
+          g.gain.setValueAtTime(0, now + i * 0.18);
+          g.gain.linearRampToValueAtTime(0.25, now + i * 0.18 + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.18 + 0.35);
+          o.connect(g).connect(ctx.destination);
+          o.start(now + i * 0.18);
+          o.stop(now + i * 0.18 + 0.36);
+        });
+      } catch (err) {
+        // audio blocked, ignore
+      }
+    }
+    prevIssueCountRef.current = pendingCount;
+  }, [issueReports, muted]);
 
   const loadAllTasks = async () => {
     const { data } = await supabase
@@ -598,6 +645,13 @@ export default function AdminDashboard() {
             <button onClick={openTypeSelect} className="p-2 bg-accent/10 text-accent rounded-full">
               <Plus size={24} />
             </button>
+            <button
+              onClick={() => setMuted(m => !m)}
+              className={`p-2 rounded-full ${muted ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}
+              title={muted ? 'Включить звук уведомлений' : 'Выключить звук уведомлений'}
+            >
+              {muted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+            </button>
             <button onClick={signOut} className="p-2 bg-destructive/10 text-destructive rounded-full">
               <LogOut size={24} />
             </button>
@@ -631,7 +685,7 @@ export default function AdminDashboard() {
                     {pendingIssues.length}
                   </span>
                 )}
-                {tab === 'pending' ? 'Заявки' : tab === 'done' ? 'Готовые' : tab === 'mytasks' ? 'Задания' : tab === 'users' ? 'Юзеры' : tab === 'issues' ? 'Проблемы' : 'Архив'}
+                {tab === 'pending' ? 'Заявки' : tab === 'done' ? 'Готовые' : tab === 'mytasks' ? 'Задания' : tab === 'users' ? 'Юзеры' : tab === 'issues' ? 'Вопросы' : 'Архив'}
               </button>
             );
           })}
