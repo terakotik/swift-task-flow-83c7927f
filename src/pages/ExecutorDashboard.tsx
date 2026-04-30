@@ -223,9 +223,15 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
         earned: rewards.reduce((s, r: any) => s + Number(r.amount), 0),
       });
     }
-  };
 
-  const loadCompletedTasks = async () => {
+    // Активная заявка на выплату
+    const { count: pendingCount } = await (supabase as any)
+      .from('payout_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'pending');
+    setHasPendingPayout((pendingCount ?? 0) > 0);
+  };
     if (!user) return;
     const [{ data }, { data: bh }] = await Promise.all([
       supabase
