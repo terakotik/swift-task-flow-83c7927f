@@ -780,6 +780,8 @@ export default function SuperAdmin() {
           );
         })()}
 
+        <AdminPayoutRequests />
+
         <Dialog open={isPayoutDialogOpen} onOpenChange={setIsPayoutDialogOpen}>
           <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden rounded-2xl">
             <DialogHeader>
