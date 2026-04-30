@@ -333,13 +333,27 @@ export default function AdminDashboard() {
   };
 
   const completeTask = async (ct: CompletedTaskWithProfile) => {
-    await supabase.from('completed_tasks').update({ status: 'done', completed_at: new Date().toISOString() }).eq('id', ct.id);
-    const { data: profile } = await supabase.from('profiles').select('balance').eq('user_id', ct.user_id).single();
-    if (profile) {
-      await supabase.from('profiles').update({ balance: profile.balance + 20 }).eq('user_id', ct.user_id);
+    // Идемпотентно: атомарно меняет статус и начисляет баланс ровно один раз
+    if (ct.status === 'done' || ct.status === 'paid') {
+      toast({ title: 'Уже подтверждено', description: 'Баланс уже начислен ранее' });
+      return;
+    }
+    const { data, error } = await supabase.rpc('admin_complete_task' as any, { _completed_id: ct.id });
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const res = data as { ok: boolean; credited?: number; skipped?: string; error?: string };
+    if (!res?.ok) {
+      toast({ title: 'Ошибка', description: res?.error ?? 'Не удалось подтвердить', variant: 'destructive' });
+      return;
     }
     loadCompletedTasks();
-    toast({ title: 'Готово!' });
+    if (res.skipped) {
+      toast({ title: 'Уже было подтверждено', description: 'Повторное начисление пропущено' });
+    } else {
+      toast({ title: 'Готово!', description: `+${res.credited}₽ на баланс` });
+    }
   };
 
   const openReject = (ct: CompletedTaskWithProfile) => {
