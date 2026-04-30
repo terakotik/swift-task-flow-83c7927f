@@ -363,6 +363,7 @@ export type Database = {
         Args: { _delta: number; _reason: string; _user_id: string }
         Returns: Json
       }
+      admin_complete_task: { Args: { _completed_id: string }; Returns: Json }
       approve_payout_request: { Args: { _request_id: string }; Returns: Json }
       create_payout_request: {
         Args: {
