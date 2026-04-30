@@ -213,6 +213,50 @@ export default function AdminDashboard() {
     };
   }, []);
 
+  // Persist mute setting
+  useEffect(() => {
+    localStorage.setItem('admin_sound_muted', muted ? '1' : '0');
+  }, [muted]);
+
+  // Sound + title badge for new pending issues (questions)
+  useEffect(() => {
+    const pendingCount = issueReports.filter(i => i.status === 'pending').length;
+
+    // Update browser tab title
+    const baseTitle = 'Админ-панель';
+    document.title = pendingCount > 0 ? `(${pendingCount}) ${baseTitle} · Вопросы` : baseTitle;
+
+    // Play sound only if count increased (new issue arrived) and not on first load
+    const prev = prevIssueCountRef.current;
+    if (prev > 0 && pendingCount > prev && !muted) {
+      try {
+        if (!audioCtxRef.current) {
+          const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
+          audioCtxRef.current = new Ctx();
+        }
+        const ctx = audioCtxRef.current!;
+        if (ctx.state === 'suspended') ctx.resume();
+        const now = ctx.currentTime;
+        // Two-tone "ding"
+        [880, 1320].forEach((freq, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = freq;
+          g.gain.setValueAtTime(0, now + i * 0.18);
+          g.gain.linearRampToValueAtTime(0.25, now + i * 0.18 + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.18 + 0.35);
+          o.connect(g).connect(ctx.destination);
+          o.start(now + i * 0.18);
+          o.stop(now + i * 0.18 + 0.36);
+        });
+      } catch (err) {
+        // audio blocked, ignore
+      }
+    }
+    prevIssueCountRef.current = pendingCount;
+  }, [issueReports, muted]);
+
   const loadAllTasks = async () => {
     const { data } = await supabase
       .from('tasks')
