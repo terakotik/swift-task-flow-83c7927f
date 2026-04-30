@@ -81,7 +81,6 @@ export default function UserAuth() {
 
   const benefits = [
     { icon: Wallet, text: 'Быстрые выплаты' },
-    { icon: Tag, text: 'Задания от 10 ₽' },
     { icon: Smartphone, text: 'Работа с телефона' },
     { icon: Users, text: 'Удобный кабинет' },
   ];
