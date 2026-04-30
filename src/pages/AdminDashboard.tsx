@@ -639,18 +639,33 @@ export default function AdminDashboard() {
             <button onClick={openTypeSelect} className="p-2 bg-accent/10 text-accent rounded-full">
               <Plus size={24} />
             </button>
-            <button
-              onClick={() => setMuted(m => !m)}
-              className={`p-2 rounded-full ${muted ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}
-              title={muted ? 'Включить звук уведомлений' : 'Выключить звук уведомлений'}
-            >
-              {muted ? <VolumeX size={24} /> : <Volume2 size={24} />}
-            </button>
             <button onClick={signOut} className="p-2 bg-destructive/10 text-destructive rounded-full">
               <LogOut size={24} />
             </button>
           </div>
         </div>
+        {(() => {
+          const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+          const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate() - 7); startOfWeek.setHours(0,0,0,0);
+          const todayPosted = allTasks.filter(t => new Date(t.created_at) >= startOfDay).length;
+          const todayDone = completedTasks.filter(c => (c.status === 'done' || c.status === 'paid') && new Date((c as any).completed_at ?? c.created_at) >= startOfDay).length;
+          const weekPosted = allTasks.filter(t => new Date(t.created_at) >= startOfWeek).length;
+          const weekDone = completedTasks.filter(c => (c.status === 'done' || c.status === 'paid') && new Date((c as any).completed_at ?? c.created_at) >= startOfWeek).length;
+          return (
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-3">
+                <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-1">Сегодня</p>
+                <p className="text-[11px] font-bold text-foreground">Выложено: <span className="font-black">{todayPosted}</span></p>
+                <p className="text-[11px] font-bold text-foreground">Выполнено: <span className="font-black text-accent">{todayDone}</span></p>
+              </div>
+              <div className="bg-muted/60 border border-border rounded-2xl p-3">
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">За неделю</p>
+                <p className="text-[11px] font-bold text-foreground">Выложено: <span className="font-black">{weekPosted}</span></p>
+                <p className="text-[11px] font-bold text-foreground">Выполнено: <span className="font-black text-accent">{weekDone}</span></p>
+              </div>
+            </div>
+          );
+        })()}
         <div className="flex gap-1.5 flex-wrap">
           {(['pending', 'done', 'mytasks', 'users', 'issues', 'archive'] as const).map(tab => {
             const pendingCount = completedTasks.filter(c => c.status === 'pending').length;
