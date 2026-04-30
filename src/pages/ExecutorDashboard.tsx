@@ -232,6 +232,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
       .eq('status', 'pending');
     setHasPendingPayout((pendingCount ?? 0) > 0);
   };
+
+  const loadCompletedTasks = async () => {
     if (!user) return;
     const [{ data }, { data: bh }] = await Promise.all([
       supabase
