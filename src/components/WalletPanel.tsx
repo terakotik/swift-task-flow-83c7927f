@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Wallet, X, Clock, CheckCircle, XCircle, TrendingUp, History, Send, ChevronRight } from 'lucide-react';
 
-const MIN_PAYOUT = 500;
+const MIN_PAYOUT = 200;
 
 type Method = 'sbp' | 'usdt_trc20';
 
