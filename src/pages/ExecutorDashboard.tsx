@@ -778,11 +778,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
 
             <Button
               onClick={() => {
-                toast({
-                  title: 'Недостаточно баланса для вывода средств',
-                  description: 'Минимальная сумма для вывода — 200₽',
-                  variant: 'destructive',
-                });
+                setShowSettings(false);
+                setShowWallet(true);
               }}
               className="w-full font-black uppercase bg-foreground text-background hover:bg-foreground/90 h-12"
             >
