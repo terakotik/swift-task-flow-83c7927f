@@ -183,6 +183,48 @@ export type Database = {
           },
         ]
       }
+      payout_requests: {
+        Row: {
+          amount: number
+          comment: string | null
+          created_at: string
+          details: Json
+          id: string
+          method: string
+          processed_at: string | null
+          processed_by: string | null
+          reject_reason: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          comment?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          method: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reject_reason?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          comment?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          method?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reject_reason?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           balance: number
@@ -321,6 +363,16 @@ export type Database = {
         Args: { _delta: number; _reason: string; _user_id: string }
         Returns: Json
       }
+      approve_payout_request: { Args: { _request_id: string }; Returns: Json }
+      create_payout_request: {
+        Args: {
+          _amount: number
+          _comment: string
+          _details: Json
+          _method: string
+        }
+        Returns: Json
+      }
       generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -331,6 +383,10 @@ export type Database = {
       }
       lookup_referrer: { Args: { _code: string }; Returns: Json }
       process_referral_payout: { Args: { _user_id: string }; Returns: Json }
+      reject_payout_request: {
+        Args: { _reason: string; _request_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "user"
