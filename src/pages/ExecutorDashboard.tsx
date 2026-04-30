@@ -4,9 +4,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon, XCircle, Gift, Users, Share2, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon, XCircle, Gift, Users, Share2, AlertTriangle, ChevronRight, Layers } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { WalletPanel } from '@/components/WalletPanel';
+import { OffersPanel } from '@/components/OffersPanel';
 
 type Task = Tables<'tasks'>;
 
@@ -143,6 +144,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const [sendingIssue, setSendingIssue] = useState(false);
   const [balanceHistory, setBalanceHistory] = useState<Array<{ id: string; delta: number; reason: string | null; created_at: string; new_balance: number }>>([]);
   const [showWallet, setShowWallet] = useState(false);
+  const [showOffers, setShowOffers] = useState(false);
   const [hasPendingPayout, setHasPendingPayout] = useState(false);
 
   useEffect(() => {
@@ -485,6 +487,11 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                 <Info size={24} />
               </button>
               {!demoMode && (
+                <button onClick={() => setShowOffers(true)} className="p-2 bg-accent/10 text-accent rounded-full" title="Офферы">
+                  <Layers size={24} />
+                </button>
+              )}
+              {!demoMode && (
                 <button onClick={() => setShowSettings(true)} className="p-2 bg-muted text-foreground rounded-full">
                   <Settings size={24} />
                 </button>
@@ -725,6 +732,9 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
           onBalanceChanged={() => { loadProfile(); }}
         />
       )}
+
+      {/* Offers Panel */}
+      {showOffers && <OffersPanel onClose={() => setShowOffers(false)} />}
 
       {/* Settings Modal */}
       {showSettings && user && (
