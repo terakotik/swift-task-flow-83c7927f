@@ -645,6 +645,13 @@ export default function AdminDashboard() {
             <button onClick={openTypeSelect} className="p-2 bg-accent/10 text-accent rounded-full">
               <Plus size={24} />
             </button>
+            <button
+              onClick={() => setMuted(m => !m)}
+              className={`p-2 rounded-full ${muted ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}
+              title={muted ? 'Включить звук уведомлений' : 'Выключить звук уведомлений'}
+            >
+              {muted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+            </button>
             <button onClick={signOut} className="p-2 bg-destructive/10 text-destructive rounded-full">
               <LogOut size={24} />
             </button>
