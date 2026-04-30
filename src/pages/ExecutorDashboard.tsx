@@ -4,8 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon, XCircle, Gift, Users, Share2, AlertTriangle } from 'lucide-react';
+import { Copy, ArrowLeft, Info, LogOut, CheckCircle, Clock, Package, Settings, Wallet, X, Copy as CopyIcon, XCircle, Gift, Users, Share2, AlertTriangle, ChevronRight } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { WalletPanel } from '@/components/WalletPanel';
 
 type Task = Tables<'tasks'>;
 
@@ -141,6 +142,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const [selectedIssue, setSelectedIssue] = useState<'Нет соуса' | 'Нет налички' | 'Платная доставка' | ''>('');
   const [sendingIssue, setSendingIssue] = useState(false);
   const [balanceHistory, setBalanceHistory] = useState<Array<{ id: string; delta: number; reason: string | null; created_at: string; new_balance: number }>>([]);
+  const [showWallet, setShowWallet] = useState(false);
+  const [hasPendingPayout, setHasPendingPayout] = useState(false);
 
   useEffect(() => {
     if (!demoMode) return;
@@ -220,6 +223,14 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
         earned: rewards.reduce((s, r: any) => s + Number(r.amount), 0),
       });
     }
+
+    // Активная заявка на выплату
+    const { count: pendingCount } = await (supabase as any)
+      .from('payout_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'pending');
+    setHasPendingPayout((pendingCount ?? 0) > 0);
   };
 
   const loadCompletedTasks = async () => {
@@ -494,17 +505,42 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
             </div>
           </div>
 
-          {/* Balance Card */}
-          <div className="bg-accent/10 rounded-2xl p-4 flex items-center justify-between mb-3">
-            <div>
-              <p className="text-[10px] font-black text-accent uppercase tracking-widest">Ваш баланс</p>
-              <p className="text-3xl font-black text-accent">{balance}₽</p>
+          {/* Balance Card — открывает кошелёк */}
+          {!demoMode ? (
+            <button
+              type="button"
+              onClick={() => setShowWallet(true)}
+              className="w-full bg-accent/10 hover:bg-accent/15 rounded-2xl p-4 flex items-center justify-between mb-3 active:scale-[0.99] transition-all border border-accent/20 text-left"
+            >
+              <div>
+                <p className="text-[10px] font-black text-accent uppercase tracking-widest flex items-center gap-1">
+                  <Wallet size={11} /> Мой кошелёк
+                </p>
+                <p className="text-3xl font-black text-accent">{balance}₽</p>
+                {hasPendingPayout && (
+                  <p className="text-[9px] font-black text-warning uppercase mt-0.5">⏳ Заявка в обработке</p>
+                )}
+              </div>
+              <div className="text-right flex items-center gap-2">
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Активно заданий</p>
+                  <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
+                </div>
+                <ChevronRight className="text-muted-foreground" size={20} />
+              </div>
+            </button>
+          ) : (
+            <div className="bg-accent/10 rounded-2xl p-4 flex items-center justify-between mb-3">
+              <div>
+                <p className="text-[10px] font-black text-accent uppercase tracking-widest">Ваш баланс</p>
+                <p className="text-3xl font-black text-accent">{balance}₽</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Активных заданий</p>
+                <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Активных заданий</p>
-              <p className="text-2xl font-black text-foreground">{availableTasks.length}</p>
-            </div>
-          </div>
+          )}
 
           {/* Кнопка "Привести друга" — только для авторизованных, не в демо */}
           {!demoMode && (
@@ -678,6 +714,16 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
         <div className="p-4 pb-8 mt-auto">
           {demoFooter}
         </div>
+      )}
+
+      {/* Wallet Panel (CPA-style) */}
+      {showWallet && user && (
+        <WalletPanel
+          userId={user.id}
+          balance={balance}
+          onClose={() => setShowWallet(false)}
+          onBalanceChanged={() => { loadProfile(); }}
+        />
       )}
 
       {/* Settings Modal */}
