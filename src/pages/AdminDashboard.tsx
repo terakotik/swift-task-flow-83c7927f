@@ -116,6 +116,9 @@ export default function AdminDashboard() {
   const [historyUser, setHistoryUser] = useState<{ user_id: string; name: string } | null>(null);
   const [historyItems, setHistoryItems] = useState<Array<{ id: string; order_number: string; completed_at: string | null; task_name: string; status: string; task_type?: string; image_url?: string | null }>>([]);
   const [issueReports, setIssueReports] = useState<OrderIssueReport[]>([]);
+  const [muted, setMuted] = useState<boolean>(() => localStorage.getItem('admin_sound_muted') === '1');
+  const prevIssueCountRef = useRef<number>(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Reject flow
   const [rejectTarget, setRejectTarget] = useState<CompletedTaskWithProfile | null>(null);
