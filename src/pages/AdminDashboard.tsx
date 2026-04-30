@@ -644,6 +644,7 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
+        {/* Статистика временно скрыта
         {(() => {
           const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
           const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate() - 7); startOfWeek.setHours(0,0,0,0);
@@ -666,6 +667,7 @@ export default function AdminDashboard() {
             </div>
           );
         })()}
+        */}
         <div className="flex gap-1.5 flex-wrap">
           {(['pending', 'done', 'mytasks', 'users', 'issues', 'archive'] as const).map(tab => {
             const pendingCount = completedTasks.filter(c => c.status === 'pending').length;
