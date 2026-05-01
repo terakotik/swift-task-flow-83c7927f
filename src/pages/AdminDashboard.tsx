@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban, Tag, Filter, Check, Volume2, VolumeX } from 'lucide-react';
+import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban, Tag, Filter, Check, Volume2, VolumeX, Video } from 'lucide-react';
 
 interface CompletedTask {
   id: string;
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
 
   // Add task flow
   const [showTypeSelect, setShowTypeSelect] = useState(false);
-  const [taskKind, setTaskKind] = useState<'text' | 'image' | null>(null);
+  const [taskKind, setTaskKind] = useState<'text' | 'image' | 'reels' | null>(null);
 
   // Image task state
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -140,6 +140,12 @@ export default function AdminDashboard() {
   const [imageAddr, setImageAddr] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reels task state
+  const [reelsName, setReelsName] = useState('');
+  const [reelsDesc, setReelsDesc] = useState('');
+  const [reelsRef, setReelsRef] = useState('');
+  const [submittingReels, setSubmittingReels] = useState(false);
 
   // Timer selection state
   const [parsedTask, setParsedTask] = useState<ReturnType<typeof parseTaskText>>(null);
@@ -381,10 +387,41 @@ export default function AdminDashboard() {
     setShowTypeSelect(true);
   };
 
-  const chooseTaskKind = (kind: 'text' | 'image') => {
+  const chooseTaskKind = (kind: 'text' | 'image' | 'reels') => {
     setTaskKind(kind);
     setShowTypeSelect(false);
     setShowAddTask(true);
+  };
+
+  const submitReelsTask = async () => {
+    if (!reelsName.trim() || !reelsDesc.trim()) {
+      toast({ title: 'Ошибка', description: 'Укажите название и описание задания.', variant: 'destructive' });
+      return;
+    }
+    setSubmittingReels(true);
+    const task_id = 'reels_' + Date.now();
+    const { error } = await supabase.from('tasks').insert({
+      task_id,
+      name: reelsName.trim(),
+      addr1: '',
+      addr2: '—',
+      link: '',
+      task_type: 'reels',
+      description: reelsDesc.trim(),
+      reference_link: reelsRef.trim() || null,
+    } as any);
+    setSubmittingReels(false);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setReelsName('');
+    setReelsDesc('');
+    setReelsRef('');
+    setTaskKind(null);
+    setShowAddTask(false);
+    loadAllTasks();
+    toast({ title: 'Задание на рилс добавлено' });
   };
 
   const handleImagePick = (file: File | null) => {
