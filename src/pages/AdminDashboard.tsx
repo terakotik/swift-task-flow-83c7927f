@@ -1077,7 +1077,67 @@ export default function AdminDashboard() {
                   <p className="text-[11px] text-muted-foreground font-bold">Загрузка скриншота и адреса доставки</p>
                 </div>
               </button>
+              <button
+                onClick={() => chooseTaskKind('reels')}
+                className="w-full p-5 rounded-2xl border-2 border-border hover:border-warning bg-card flex items-center gap-4 text-left transition-all"
+              >
+                <div className="p-3 bg-warning/10 rounded-2xl text-warning"><Video size={24} /></div>
+                <div className="flex-1">
+                  <p className="font-black text-foreground text-sm uppercase">Рилс</p>
+                  <p className="text-[11px] text-muted-foreground font-bold">Видео-задание · 200₽ + бонус 200₽ за 5000+ просмотров</p>
+                </div>
+              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Reels Task Modal */}
+      {showAddTask && taskKind === 'reels' && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => { if (!submittingReels) { setShowAddTask(false); setTaskKind(null); } }} />
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-6 pb-10 animate-in slide-in-from-bottom max-h-[92vh] overflow-y-auto">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-5" />
+            <div className="flex items-center gap-2 mb-2">
+              <Video size={20} className="text-warning" />
+              <h2 className="text-xl font-black text-foreground">Задание на рилс</h2>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">200₽ за рилс + 200₽ бонус за 5000+ просмотров</p>
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Название</label>
+            <Input
+              value={reelsName}
+              onChange={e => setReelsName(e.target.value)}
+              placeholder="Например: Обзор нового кафе"
+              className="mb-3 mt-1 h-11 rounded-xl"
+              maxLength={120}
+            />
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Что нужно снять / смонтировать</label>
+            <Textarea
+              value={reelsDesc}
+              onChange={e => setReelsDesc(e.target.value)}
+              placeholder="Подробно опишите сценарий, длительность, обязательные кадры, текст, музыку..."
+              className="mb-3 mt-1 min-h-[140px] rounded-xl"
+              maxLength={2000}
+            />
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Ссылка на референс (необязательно)</label>
+            <Input
+              value={reelsRef}
+              onChange={e => setReelsRef(e.target.value)}
+              placeholder="https://..."
+              className="mb-5 mt-1 h-11 rounded-xl"
+              maxLength={500}
+            />
+
+            <Button
+              onClick={submitReelsTask}
+              disabled={submittingReels || !reelsName.trim() || !reelsDesc.trim()}
+              className="w-full font-black uppercase bg-warning text-warning-foreground hover:bg-warning/90 rounded-2xl h-14"
+            >
+              {submittingReels ? 'Создаём...' : 'Создать задание'}
+            </Button>
           </div>
         </div>
       )}
