@@ -362,7 +362,25 @@ export default function AdminDashboard() {
     }
   };
 
-  const openReject = (ct: CompletedTaskWithProfile) => {
+  const awardReelsBonus = async (ct: CompletedTaskWithProfile) => {
+    if (!confirm(`Начислить бонус +200₽ за 5000+ просмотров рилса исполнителю ${ct.executor_name || ''}?`)) return;
+    const { data, error } = await supabase.rpc('admin_award_reels_bonus' as any, { _completed_id: ct.id });
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const res = data as { ok: boolean; credited?: number; skipped?: string; error?: string };
+    if (!res?.ok) {
+      toast({ title: 'Ошибка', description: res?.error ?? 'Не удалось начислить', variant: 'destructive' });
+      return;
+    }
+    if (res.skipped) {
+      toast({ title: 'Бонус уже начислен', description: 'Повторное начисление пропущено' });
+    } else {
+      toast({ title: '🔥 Бонус начислен', description: `+${res.credited}₽ за просмотры` });
+    }
+    loadCompletedTasks();
+  };
     setRejectTarget(ct);
     setRejectReason('');
   };
