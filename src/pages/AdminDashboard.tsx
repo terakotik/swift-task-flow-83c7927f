@@ -1119,6 +1119,7 @@ export default function AdminDashboard() {
                   <p className="text-[11px] text-muted-foreground font-bold">Загрузка скриншота и адреса доставки</p>
                 </div>
               </button>
+              {/* Создание заданий «Рилс» временно отключено
               <button
                 onClick={() => chooseTaskKind('reels')}
                 className="w-full p-5 rounded-2xl border-2 border-border hover:border-warning bg-card flex items-center gap-4 text-left transition-all"
@@ -1129,6 +1130,7 @@ export default function AdminDashboard() {
                   <p className="text-[11px] text-muted-foreground font-bold">Видео-задание · 200₽ + бонус 200₽ за 5000+ просмотров</p>
                 </div>
               </button>
+              */}
             </div>
           </div>
         </div>
