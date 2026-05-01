@@ -729,11 +729,12 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
             {availableTasks.map(task => {
               const hasTimer = !!task.expires_at;
               const isImage = task.task_type === 'image' && task.image_url;
+              const isReels = task.task_type === 'reels';
               return (
                 <div
                   key={task.id}
                   className="task-card bg-card p-5 rounded-2xl border border-border shadow-sm flex justify-between items-center cursor-pointer active:scale-[0.98] transition-transform"
-                  onClick={() => setCurrentTask(task)}
+                  onClick={() => { setReelsSubmitted(false); setCurrentTask(task); }}
                 >
                   <div className="flex-1 pr-4 flex gap-3 items-center min-w-0">
                     {isImage && (
@@ -743,8 +744,21 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                         className="w-14 h-14 rounded-xl object-cover bg-muted shrink-0"
                       />
                     )}
+                    {isReels && (
+                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-warning/30 to-primary/30 flex items-center justify-center text-warning shrink-0 text-2xl">
+                        🎬
+                      </div>
+                    )}
                     <div className="min-w-0">
-                      {isImage ? (
+                      {isReels ? (
+                        <>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-warning/15 text-warning">Рилс · 200₽</span>
+                          </div>
+                          <h3 className="font-black text-foreground text-sm uppercase mt-1">{task.name}</h3>
+                          <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight break-all">ID: {task.task_id}</p>
+                        </>
+                      ) : isImage ? (
                         <>
                           <h3 className="font-black text-foreground text-sm uppercase">Задание с картинкой</h3>
                           <p className="text-[10px] text-muted-foreground font-bold truncate">→ {task.addr2}</p>
