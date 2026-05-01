@@ -381,6 +381,8 @@ export default function AdminDashboard() {
     }
     loadCompletedTasks();
   };
+
+  const openReject = (ct: CompletedTaskWithProfile) => {
     setRejectTarget(ct);
     setRejectReason('');
   };
