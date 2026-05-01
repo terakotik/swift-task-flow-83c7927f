@@ -337,8 +337,135 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
     return { text: '+20₽ зачислено', icon: <CheckCircle size={14} className="text-accent" />, color: 'text-accent' };
   };
 
+  const submitReels = async () => {
+    if (submitting || !currentTask) return;
+    if (demoMode) {
+      setReelsSubmitted(true);
+      return;
+    }
+    if (!user) return;
+    setSubmitting(true);
+    const orderNumber = 'reels-' + Date.now().toString(36);
+    const { error } = await supabase.from('completed_tasks').insert({
+      task_id: currentTask.id,
+      user_id: user.id,
+      order_number: orderNumber,
+    });
+    setSubmitting(false);
+    if (error) {
+      const isDup = error.code === '23505' || /duplicate|unique/i.test(error.message);
+      toast({
+        title: isDup ? 'Уже отправлено' : 'Ошибка',
+        description: isDup ? 'Это задание уже на проверке.' : error.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+    setCompletedIds(prev => new Set(prev).add(currentTask.id));
+    setReelsSubmitted(true);
+    loadCompletedTasks();
+  };
+
   if (currentTask) {
+    const isReels = currentTask.task_type === 'reels';
     const isImage = currentTask.task_type === 'image' && currentTask.image_url;
+
+    if (isReels) {
+      const desc = (currentTask as any).description as string | null;
+      const refLink = (currentTask as any).reference_link as string | null;
+      return (
+        <div className="max-w-md mx-auto min-h-screen p-4 space-y-4">
+          <button
+            onClick={() => { setCurrentTask(null); setReelsSubmitted(false); }}
+            className="flex items-center gap-2 text-primary font-bold text-sm"
+          >
+            <ArrowLeft size={18} /> Назад к списку
+          </button>
+
+          {!reelsSubmitted ? (
+            <div className="bg-card rounded-3xl p-6 shadow-sm border border-border space-y-5">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest bg-warning/15 text-warning px-2 py-1 rounded-full">
+                  🎬 Рилс
+                </span>
+                <span className="text-[10px] font-black text-accent">200₽ + бонус 200₽</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-foreground">{currentTask.name}</h2>
+                <span className="text-[10px] bg-muted px-2 py-1 rounded text-muted-foreground font-black mt-2 inline-block uppercase tracking-wider break-all">
+                  ID: {currentTask.task_id}
+                </span>
+              </div>
+
+              {desc && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-primary uppercase tracking-widest">Что нужно снять / смонтировать</label>
+                  <div className="rounded-2xl bg-muted/60 border border-border p-4 text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                    {desc}
+                  </div>
+                </div>
+              )}
+
+              {refLink && (
+                <a
+                  href={refLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-full gap-3 bg-primary text-primary-foreground font-black py-4 rounded-2xl shadow-sm active:scale-95 transition-transform text-sm uppercase"
+                >
+                  Открыть референс
+                </a>
+              )}
+
+              <div className="rounded-2xl bg-accent/10 border border-accent/20 p-4 text-[11px] font-bold text-foreground/80 leading-relaxed">
+                💰 <span className="text-accent">200₽</span> за принятый рилс
+                <br />
+                🔥 <span className="text-warning">+200₽</span> бонус, если рилс наберёт <strong>5000+ просмотров</strong>
+              </div>
+
+              <Button
+                onClick={submitReels}
+                disabled={submitting}
+                className="w-full font-black uppercase bg-foreground text-background hover:bg-foreground/90 disabled:opacity-60 h-14 rounded-2xl text-base"
+              >
+                {submitting ? 'Отправка...' : 'Готово'}
+              </Button>
+            </div>
+          ) : (
+            <div className="bg-card rounded-3xl p-6 shadow-sm border border-border space-y-5 text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-accent/15 flex items-center justify-center text-accent">
+                <CheckCircle size={36} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-foreground">Отправьте видео на модерацию</h3>
+                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                  Перешлите готовый рилс админу в Telegram. Укажите ID задания: <span className="font-black text-foreground">{currentTask.task_id}</span>
+                </p>
+              </div>
+              <a
+                href={TELEGRAM_ADMIN}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center w-full gap-2 bg-primary text-primary-foreground font-black py-4 rounded-2xl shadow-sm active:scale-95 transition-transform text-sm uppercase"
+              >
+                Написать админу в Telegram
+              </a>
+              <p className="text-[10px] text-muted-foreground font-bold">
+                После модерации админ начислит 200₽ на ваш баланс. Если рилс наберёт 5000+ просмотров — пришлите статистику админу для бонуса +200₽.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => { setCurrentTask(null); setReelsSubmitted(false); }}
+                className="w-full font-black uppercase rounded-2xl h-12"
+              >
+                Назад к списку
+              </Button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-md mx-auto min-h-screen p-4 space-y-4">
         <button onClick={() => setCurrentTask(null)} className="flex items-center gap-2 text-primary font-bold text-sm">
