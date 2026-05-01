@@ -1119,6 +1119,7 @@ export default function AdminDashboard() {
                   <p className="text-[11px] text-muted-foreground font-bold">Загрузка скриншота и адреса доставки</p>
                 </div>
               </button>
+              {/* Создание заданий «Рилс» временно отключено
               <button
                 onClick={() => chooseTaskKind('reels')}
                 className="w-full p-5 rounded-2xl border-2 border-border hover:border-warning bg-card flex items-center gap-4 text-left transition-all"
@@ -1129,12 +1130,13 @@ export default function AdminDashboard() {
                   <p className="text-[11px] text-muted-foreground font-bold">Видео-задание · 200₽ + бонус 200₽ за 5000+ просмотров</p>
                 </div>
               </button>
+              */}
             </div>
           </div>
         </div>
       )}
 
-      {/* Add Reels Task Modal */}
+      {/* Модалка создания задания «Рилс» временно отключена
       {showAddTask && taskKind === 'reels' && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => { if (!submittingReels) { setShowAddTask(false); setTaskKind(null); } }} />
@@ -1183,6 +1185,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      */}
 
       {/* Add Task Modal */}
       {showAddTask && taskKind === 'text' && (
