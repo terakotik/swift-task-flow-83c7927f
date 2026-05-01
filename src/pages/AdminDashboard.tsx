@@ -1136,7 +1136,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Add Reels Task Modal */}
+      {/* Модалка создания задания «Рилс» временно отключена
       {showAddTask && taskKind === 'reels' && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => { if (!submittingReels) { setShowAddTask(false); setTaskKind(null); } }} />
@@ -1185,6 +1185,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      */}
 
       {/* Add Task Modal */}
       {showAddTask && taskKind === 'text' && (
