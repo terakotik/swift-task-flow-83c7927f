@@ -294,11 +294,13 @@ export type Database = {
           addr2: string
           created_at: string
           created_by: string | null
+          description: string | null
           expires_at: string | null
           id: string
           image_url: string | null
           link: string | null
           name: string | null
+          reference_link: string | null
           restaurant_tag: string | null
           status: string
           task_id: string
@@ -309,11 +311,13 @@ export type Database = {
           addr2: string
           created_at?: string
           created_by?: string | null
+          description?: string | null
           expires_at?: string | null
           id?: string
           image_url?: string | null
           link?: string | null
           name?: string | null
+          reference_link?: string | null
           restaurant_tag?: string | null
           status?: string
           task_id: string
@@ -324,11 +328,13 @@ export type Database = {
           addr2?: string
           created_at?: string
           created_by?: string | null
+          description?: string | null
           expires_at?: string | null
           id?: string
           image_url?: string | null
           link?: string | null
           name?: string | null
+          reference_link?: string | null
           restaurant_tag?: string | null
           status?: string
           task_id?: string
@@ -361,6 +367,10 @@ export type Database = {
     Functions: {
       admin_adjust_balance: {
         Args: { _delta: number; _reason: string; _user_id: string }
+        Returns: Json
+      }
+      admin_award_reels_bonus: {
+        Args: { _completed_id: string }
         Returns: Json
       }
       admin_complete_task: { Args: { _completed_id: string }; Returns: Json }

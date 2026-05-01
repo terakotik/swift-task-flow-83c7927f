@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban, Tag, Filter, Check, Volume2, VolumeX } from 'lucide-react';
+import { LogOut, Plus, CheckCircle, Clock, Package, Archive, RotateCcw, Users, History, X, AlertTriangle, FileText, Image as ImageIcon, Upload, XCircle, Ban, Tag, Filter, Check, Volume2, VolumeX, Video } from 'lucide-react';
 
 interface CompletedTask {
   id: string;
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
 
   // Add task flow
   const [showTypeSelect, setShowTypeSelect] = useState(false);
-  const [taskKind, setTaskKind] = useState<'text' | 'image' | null>(null);
+  const [taskKind, setTaskKind] = useState<'text' | 'image' | 'reels' | null>(null);
 
   // Image task state
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -140,6 +140,12 @@ export default function AdminDashboard() {
   const [imageAddr, setImageAddr] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reels task state
+  const [reelsName, setReelsName] = useState('');
+  const [reelsDesc, setReelsDesc] = useState('');
+  const [reelsRef, setReelsRef] = useState('');
+  const [submittingReels, setSubmittingReels] = useState(false);
 
   // Timer selection state
   const [parsedTask, setParsedTask] = useState<ReturnType<typeof parseTaskText>>(null);
@@ -356,6 +362,26 @@ export default function AdminDashboard() {
     }
   };
 
+  const awardReelsBonus = async (ct: CompletedTaskWithProfile) => {
+    if (!confirm(`Начислить бонус +200₽ за 5000+ просмотров рилса исполнителю ${ct.executor_name || ''}?`)) return;
+    const { data, error } = await supabase.rpc('admin_award_reels_bonus' as any, { _completed_id: ct.id });
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const res = data as { ok: boolean; credited?: number; skipped?: string; error?: string };
+    if (!res?.ok) {
+      toast({ title: 'Ошибка', description: res?.error ?? 'Не удалось начислить', variant: 'destructive' });
+      return;
+    }
+    if (res.skipped) {
+      toast({ title: 'Бонус уже начислен', description: 'Повторное начисление пропущено' });
+    } else {
+      toast({ title: '🔥 Бонус начислен', description: `+${res.credited}₽ за просмотры` });
+    }
+    loadCompletedTasks();
+  };
+
   const openReject = (ct: CompletedTaskWithProfile) => {
     setRejectTarget(ct);
     setRejectReason('');
@@ -381,10 +407,41 @@ export default function AdminDashboard() {
     setShowTypeSelect(true);
   };
 
-  const chooseTaskKind = (kind: 'text' | 'image') => {
+  const chooseTaskKind = (kind: 'text' | 'image' | 'reels') => {
     setTaskKind(kind);
     setShowTypeSelect(false);
     setShowAddTask(true);
+  };
+
+  const submitReelsTask = async () => {
+    if (!reelsName.trim() || !reelsDesc.trim()) {
+      toast({ title: 'Ошибка', description: 'Укажите название и описание задания.', variant: 'destructive' });
+      return;
+    }
+    setSubmittingReels(true);
+    const task_id = 'reels_' + Date.now();
+    const { error } = await supabase.from('tasks').insert({
+      task_id,
+      name: reelsName.trim(),
+      addr1: '',
+      addr2: '—',
+      link: '',
+      task_type: 'reels',
+      description: reelsDesc.trim(),
+      reference_link: reelsRef.trim() || null,
+    } as any);
+    setSubmittingReels(false);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setReelsName('');
+    setReelsDesc('');
+    setReelsRef('');
+    setTaskKind(null);
+    setShowAddTask(false);
+    loadAllTasks();
+    toast({ title: 'Задание на рилс добавлено' });
   };
 
   const handleImagePick = (file: File | null) => {
@@ -944,6 +1001,7 @@ export default function AdminDashboard() {
             {filtered.map(ct => {
               const { restaurant, street } = splitName(ct.tasks?.name ?? 'Задание');
               const isRejected = ct.status === 'rejected';
+              const isReels = ct.tasks?.task_type === 'reels';
               return (
                 <div
                   key={ct.id}
@@ -953,8 +1011,13 @@ export default function AdminDashboard() {
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-black text-foreground text-sm uppercase">{restaurant}</h3>
-                      {street && <p className="text-[10px] text-muted-foreground font-bold">{street}</p>}
+                      {isReels && (
+                        <span className="inline-block text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-warning/15 text-warning mb-1">
+                          🎬 Рилс · 200₽
+                        </span>
+                      )}
+                      <h3 className="font-black text-foreground text-sm uppercase">{isReels ? (ct.tasks?.name ?? 'Рилс') : restaurant}</h3>
+                      {!isReels && street && <p className="text-[10px] text-muted-foreground font-bold">{street}</p>}
                       <p className="text-[9px] text-muted-foreground font-bold">Исполнитель: {ct.executor_name ? ct.executor_name.split('@')[0] : 'N/A'}</p>
                       <p className="text-[9px] text-muted-foreground font-bold">
                         Отправлено: {new Date(ct.created_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} МСК
@@ -973,10 +1036,18 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                   </div>
-                  <div className="bg-muted rounded-xl p-3">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Номер заказа</p>
-                    <p className="text-foreground font-black text-lg">{ct.order_number}</p>
-                  </div>
+                  {!isReels && (
+                    <div className="bg-muted rounded-xl p-3">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Номер заказа</p>
+                      <p className="text-foreground font-black text-lg">{ct.order_number}</p>
+                    </div>
+                  )}
+                  {isReels && (
+                    <div className="bg-warning/10 border border-warning/20 rounded-xl p-3">
+                      <p className="text-[10px] font-black text-warning uppercase tracking-widest mb-1">Рилс на модерации</p>
+                      <p className="text-foreground text-xs font-bold">Исполнитель отправил рилс в Telegram. Проверьте видео и подтвердите.</p>
+                    </div>
+                  )}
                   {isRejected && ct.reject_reason && (
                     <div className="bg-destructive/15 rounded-xl p-3 border border-destructive/30">
                       <p className="text-[10px] font-black text-destructive uppercase tracking-widest mb-1">Причина отклонения</p>
@@ -986,13 +1057,13 @@ export default function AdminDashboard() {
                   {(ct.status === 'pending' || ct.status === 'accepted') && (
                     <div className="space-y-2">
                       <div className="flex gap-2">
-                        {ct.status === 'pending' && (
+                        {ct.status === 'pending' && !isReels && (
                           <Button onClick={() => acceptTask(ct.id)} variant="outline" className="flex-1 font-bold text-xs">
                             Принял заказ
                           </Button>
                         )}
                         <Button onClick={() => completeTask(ct)} className="flex-1 font-bold text-xs bg-accent text-accent-foreground hover:bg-accent/90">
-                          Готово ✓
+                          {isReels ? 'Подтвердить +200₽' : 'Готово ✓'}
                         </Button>
                       </div>
                       <Button
@@ -1003,6 +1074,14 @@ export default function AdminDashboard() {
                         <Ban size={14} /> Отклонить заявку
                       </Button>
                     </div>
+                  )}
+                  {isReels && (ct.status === 'done' || ct.status === 'paid') && (
+                    <Button
+                      onClick={() => awardReelsBonus(ct)}
+                      className="w-full font-black text-xs gap-2 bg-warning text-warning-foreground hover:bg-warning/90"
+                    >
+                      🔥 Начислить бонус +200₽ (5000+ просмотров)
+                    </Button>
                   )}
                 </div>
               );
@@ -1040,7 +1119,67 @@ export default function AdminDashboard() {
                   <p className="text-[11px] text-muted-foreground font-bold">Загрузка скриншота и адреса доставки</p>
                 </div>
               </button>
+              <button
+                onClick={() => chooseTaskKind('reels')}
+                className="w-full p-5 rounded-2xl border-2 border-border hover:border-warning bg-card flex items-center gap-4 text-left transition-all"
+              >
+                <div className="p-3 bg-warning/10 rounded-2xl text-warning"><Video size={24} /></div>
+                <div className="flex-1">
+                  <p className="font-black text-foreground text-sm uppercase">Рилс</p>
+                  <p className="text-[11px] text-muted-foreground font-bold">Видео-задание · 200₽ + бонус 200₽ за 5000+ просмотров</p>
+                </div>
+              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Reels Task Modal */}
+      {showAddTask && taskKind === 'reels' && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => { if (!submittingReels) { setShowAddTask(false); setTaskKind(null); } }} />
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-6 pb-10 animate-in slide-in-from-bottom max-h-[92vh] overflow-y-auto">
+            <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-5" />
+            <div className="flex items-center gap-2 mb-2">
+              <Video size={20} className="text-warning" />
+              <h2 className="text-xl font-black text-foreground">Задание на рилс</h2>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">200₽ за рилс + 200₽ бонус за 5000+ просмотров</p>
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Название</label>
+            <Input
+              value={reelsName}
+              onChange={e => setReelsName(e.target.value)}
+              placeholder="Например: Обзор нового кафе"
+              className="mb-3 mt-1 h-11 rounded-xl"
+              maxLength={120}
+            />
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Что нужно снять / смонтировать</label>
+            <Textarea
+              value={reelsDesc}
+              onChange={e => setReelsDesc(e.target.value)}
+              placeholder="Подробно опишите сценарий, длительность, обязательные кадры, текст, музыку..."
+              className="mb-3 mt-1 min-h-[140px] rounded-xl"
+              maxLength={2000}
+            />
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Ссылка на референс (необязательно)</label>
+            <Input
+              value={reelsRef}
+              onChange={e => setReelsRef(e.target.value)}
+              placeholder="https://..."
+              className="mb-5 mt-1 h-11 rounded-xl"
+              maxLength={500}
+            />
+
+            <Button
+              onClick={submitReelsTask}
+              disabled={submittingReels || !reelsName.trim() || !reelsDesc.trim()}
+              className="w-full font-black uppercase bg-warning text-warning-foreground hover:bg-warning/90 rounded-2xl h-14"
+            >
+              {submittingReels ? 'Создаём...' : 'Создать задание'}
+            </Button>
           </div>
         </div>
       )}
