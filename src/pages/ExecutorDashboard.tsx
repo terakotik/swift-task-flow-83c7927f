@@ -152,6 +152,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
   const [showWallet, setShowWallet] = useState(false);
   const [showOffers, setShowOffers] = useState(false);
   const [hasPendingPayout, setHasPendingPayout] = useState(false);
+  const [reelsSubmitted, setReelsSubmitted] = useState(false);
+  const TELEGRAM_ADMIN = 'https://t.me/brusnika_s';
 
   useEffect(() => {
     if (!demoMode) return;
