@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, Archive, Undo2, Wrench } from 'lucide-react';
+import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, Archive, Undo2, Wrench, Film } from 'lucide-react';
 import { AdminPayoutRequests } from '@/components/AdminPayoutRequests';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
@@ -104,6 +104,12 @@ export default function SuperAdmin() {
   const [adjustReason, setAdjustReason] = useState('');
   // Balance history items in user history modal
   const [balanceHistoryItems, setBalanceHistoryItems] = useState<Array<{ id: string; delta: number; reason: string | null; created_at: string; new_balance: number }>>([]);
+  // Video edit task form
+  const [veName, setVeName] = useState('');
+  const [veDesc, setVeDesc] = useState('');
+  const [veSource, setVeSource] = useState('');
+  const [veRef, setVeRef] = useState('');
+  const [veSubmitting, setVeSubmitting] = useState(false);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
@@ -549,6 +555,45 @@ export default function SuperAdmin() {
       description: `Создано: ${inserted?.length ?? orders.length}. ${mrStatus === 'done' ? `+${sumDelta}₽ на баланс.` : 'Статус paid (без изменения баланса).'}`,
     });
   };
+
+  const submitVideoEditTask = async () => {
+    if (!canManageTasks) {
+      toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
+      return;
+    }
+    const name = veName.trim();
+    const desc = veDesc.trim();
+    const source = veSource.trim();
+    const ref = veRef.trim();
+    if (!name || !desc) {
+      toast({ title: 'Заполните название и описание', variant: 'destructive' });
+      return;
+    }
+    setVeSubmitting(true);
+    const task_id = 'videoedit_' + Date.now();
+    // Описание + ссылка на исходники складываем в одно поле description
+    const fullDesc = source
+      ? `${desc}\n\n📦 Исходники: ${source}`
+      : desc;
+    const { error } = await supabase.from('tasks').insert({
+      task_id,
+      name,
+      addr2: 'Монтаж видео',
+      task_type: 'video_edit',
+      description: fullDesc,
+      reference_link: ref || null,
+      created_by: user?.id ?? null,
+    });
+    setVeSubmitting(false);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setVeName(''); setVeDesc(''); setVeSource(''); setVeRef('');
+    await loadData();
+    toast({ title: 'Задание создано', description: `«${name}» доступно исполнителям` });
+  };
+
 
   const eligiblePayoutUsers = profiles
     .map(profile => {
@@ -1012,7 +1057,70 @@ export default function SuperAdmin() {
           </div>
         </section>
 
+        {/* Создать задание на монтаж видео */}
+        <section className="bg-card rounded-2xl border border-border shadow-sm p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Film size={18} className="text-warning" />
+            <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
+              Новое задание · Монтаж видео
+            </h2>
+          </div>
+          <p className="text-[10px] text-muted-foreground font-bold">
+            Появится у всех исполнителей в общем списке. За принятый монтаж — 200₽ на баланс после подтверждения админом.
+          </p>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Название</label>
+            <Input
+              value={veName}
+              onChange={e => setVeName(e.target.value)}
+              placeholder="Напр.: Reels для кофейни «Брусника»"
+              className="h-10 text-sm"
+              disabled={veSubmitting}
+            />
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Что нужно сделать (описание)</label>
+            <Textarea
+              value={veDesc}
+              onChange={e => setVeDesc(e.target.value)}
+              placeholder="Подробно опиши: длина, стиль, музыка, какие склейки, текст на экране и т.д."
+              rows={5}
+              disabled={veSubmitting}
+            />
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Ссылка на исходники</label>
+            <Input
+              value={veSource}
+              onChange={e => setVeSource(e.target.value)}
+              placeholder="https://disk.yandex.ru/... или Google Drive"
+              className="h-10 text-sm"
+              disabled={veSubmitting}
+            />
+
+            <label className="text-[10px] font-black uppercase text-muted-foreground">Ссылка-референс (необязательно)</label>
+            <Input
+              value={veRef}
+              onChange={e => setVeRef(e.target.value)}
+              placeholder="Пример видео того же стиля"
+              className="h-10 text-sm"
+              disabled={veSubmitting}
+            />
+
+            <Button
+              onClick={submitVideoEditTask}
+              disabled={veSubmitting || !canManageTasks || !veName.trim() || !veDesc.trim()}
+              className="w-full font-black uppercase rounded-2xl h-11 gap-2 bg-warning text-warning-foreground hover:bg-warning/90"
+            >
+              <Plus size={16} /> {veSubmitting ? 'Создаём...' : 'Создать задание'}
+            </Button>
+            {!canManageTasks && (
+              <p className="text-[10px] text-destructive font-semibold">Нужна роль admin для аккаунта vt@admin.com.</p>
+            )}
+          </div>
+        </section>
+
         {/* User list */}
+
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest pt-2">Все пользователи</h2>
         {[...profiles].sort((a, b) => Number(b.balance) - Number(a.balance)).map(p => {
           const role = getUserRole(p.user_id);

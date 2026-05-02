@@ -345,7 +345,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
     }
     if (!user) return;
     setSubmitting(true);
-    const orderNumber = 'reels-' + Date.now().toString(36);
+    const orderPrefix = currentTask.task_type === 'video_edit' ? 'videoedit-' : 'reels-';
+    const orderNumber = orderPrefix + Date.now().toString(36);
     const { error } = await supabase.from('completed_tasks').insert({
       task_id: currentTask.id,
       user_id: user.id,
@@ -368,11 +369,16 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
 
   if (currentTask) {
     const isReels = currentTask.task_type === 'reels';
+    const isVideoEdit = currentTask.task_type === 'video_edit';
+    const isVideoTask = isReels || isVideoEdit;
     const isImage = currentTask.task_type === 'image' && currentTask.image_url;
 
-    if (isReels) {
+    if (isVideoTask) {
       const desc = (currentTask as any).description as string | null;
       const refLink = (currentTask as any).reference_link as string | null;
+      const taskLabel = isVideoEdit ? '🎞️ Монтаж видео' : '🎬 Рилс';
+      const rewardLabel = isVideoEdit ? '200₽ за принятый монтаж' : '200₽ + бонус 200₽';
+      const sectionLabel = isVideoEdit ? 'Что нужно смонтировать' : 'Что нужно снять / смонтировать';
       return (
         <div className="max-w-md mx-auto min-h-screen p-4 space-y-4">
           <button
@@ -386,9 +392,9 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
             <div className="bg-card rounded-3xl p-6 shadow-sm border border-border space-y-5">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest bg-warning/15 text-warning px-2 py-1 rounded-full">
-                  🎬 Рилс
+                  {taskLabel}
                 </span>
-                <span className="text-[10px] font-black text-accent">200₽ + бонус 200₽</span>
+                <span className="text-[10px] font-black text-accent">{rewardLabel}</span>
               </div>
               <div>
                 <h2 className="text-xl font-black text-foreground">{currentTask.name}</h2>
@@ -399,7 +405,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
 
               {desc && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-primary uppercase tracking-widest">Что нужно снять / смонтировать</label>
+                  <label className="text-[10px] font-black text-primary uppercase tracking-widest">{sectionLabel}</label>
                   <div className="rounded-2xl bg-muted/60 border border-border p-4 text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                     {desc}
                   </div>
@@ -418,9 +424,15 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               )}
 
               <div className="rounded-2xl bg-accent/10 border border-accent/20 p-4 text-[11px] font-bold text-foreground/80 leading-relaxed">
-                💰 <span className="text-accent">200₽</span> за принятый рилс
-                <br />
-                🔥 <span className="text-warning">+200₽</span> бонус, если рилс наберёт <strong>5000+ просмотров</strong>
+                {isVideoEdit ? (
+                  <>💰 <span className="text-accent">200₽</span> за принятый монтаж видео после модерации админом.</>
+                ) : (
+                  <>
+                    💰 <span className="text-accent">200₽</span> за принятый рилс
+                    <br />
+                    🔥 <span className="text-warning">+200₽</span> бонус, если рилс наберёт <strong>5000+ просмотров</strong>
+                  </>
+                )}
               </div>
 
               <Button
@@ -437,9 +449,11 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                 <CheckCircle size={36} />
               </div>
               <div>
-                <h3 className="text-xl font-black text-foreground">Отправьте видео на модерацию</h3>
+                <h3 className="text-xl font-black text-foreground">
+                  {isVideoEdit ? 'Отправьте смонтированное видео' : 'Отправьте видео на модерацию'}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                  Перешлите готовый рилс админу в Telegram. Укажите ID задания: <span className="font-black text-foreground">{currentTask.task_id}</span>
+                  Перешлите готовое видео админу в Telegram. Укажите ID задания: <span className="font-black text-foreground">{currentTask.task_id}</span>
                 </p>
               </div>
               <a
@@ -451,7 +465,9 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                 Написать админу в Telegram
               </a>
               <p className="text-[10px] text-muted-foreground font-bold">
-                После модерации админ начислит 200₽ на ваш баланс. Если рилс наберёт 5000+ просмотров — пришлите статистику админу для бонуса +200₽.
+                {isVideoEdit
+                  ? 'После модерации админ начислит 200₽ на ваш баланс.'
+                  : 'После модерации админ начислит 200₽ на ваш баланс. Если рилс наберёт 5000+ просмотров — пришлите статистику админу для бонуса +200₽.'}
               </p>
               <Button
                 variant="outline"
@@ -730,6 +746,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               const hasTimer = !!task.expires_at;
               const isImage = task.task_type === 'image' && task.image_url;
               const isReels = task.task_type === 'reels';
+              const isVideoEdit = task.task_type === 'video_edit';
+              const isVideoTask = isReels || isVideoEdit;
               return (
                 <div
                   key={task.id}
@@ -744,16 +762,18 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                         className="w-14 h-14 rounded-xl object-cover bg-muted shrink-0"
                       />
                     )}
-                    {isReels && (
+                    {isVideoTask && (
                       <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-warning/30 to-primary/30 flex items-center justify-center text-warning shrink-0 text-2xl">
-                        🎬
+                        {isVideoEdit ? '🎞️' : '🎬'}
                       </div>
                     )}
                     <div className="min-w-0">
-                      {isReels ? (
+                      {isVideoTask ? (
                         <>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-warning/15 text-warning">Рилс · 200₽</span>
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-warning/15 text-warning">
+                              {isVideoEdit ? 'Монтаж · 200₽' : 'Рилс · 200₽'}
+                            </span>
                           </div>
                           <h3 className="font-black text-foreground text-sm uppercase mt-1">{task.name}</h3>
                           <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight break-all">ID: {task.task_id}</p>

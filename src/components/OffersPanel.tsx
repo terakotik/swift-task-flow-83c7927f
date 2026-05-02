@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { X, Utensils, MessageSquare, CheckCircle2, Lock, Video } from 'lucide-react';
+import { X, Utensils, MessageSquare, CheckCircle2, Lock, Video, Film } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -61,6 +61,28 @@ export function OffersPanel({ onClose }: Props) {
             <span>🎬 200₽ за рилс</span>
             <span>•</span>
             <span>🔥 +200₽ бонус за 5000+ просмотров</span>
+          </div>
+          <Button disabled className="w-full mt-4 bg-background/20 text-primary-foreground hover:bg-background/20 font-black h-11 rounded-2xl disabled:opacity-100">
+            Активен
+          </Button>
+        </div>
+
+        {/* Video edit — connected by default */}
+        <div className="rounded-3xl p-5 bg-gradient-to-br from-warning via-accent to-primary text-primary-foreground shadow-lg">
+          <div className="flex items-start justify-between">
+            <div className="bg-background/20 rounded-2xl p-3">
+              <Film size={24} />
+            </div>
+            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-background/25 px-2 py-1 rounded-full">
+              <CheckCircle2 size={11} /> Подключён
+            </span>
+          </div>
+          <h3 className="text-2xl font-black mt-3">Монтаж видео</h3>
+          <p className="text-xs opacity-90 mt-1">
+            Бери исходники по ссылке, монтируй ролик по ТЗ и отправляй админу в Telegram на модерацию.
+          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-[11px] font-bold opacity-90">
+            <span>🎞️ 200₽ за принятый монтаж</span>
           </div>
           <Button disabled className="w-full mt-4 bg-background/20 text-primary-foreground hover:bg-background/20 font-black h-11 rounded-2xl disabled:opacity-100">
             Активен
