@@ -18,6 +18,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import heroImg from '@/assets/reels-hero.png';
+import pantherImg from '@/assets/reels-panther.png';
 
 const PINK = 'bg-[hsl(330,85%,55%)]';
 const PINK_TEXT = 'text-[hsl(330,85%,55%)]';
@@ -54,17 +55,40 @@ const ReelsLanding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(335,90%,97%)] via-background to-[hsl(335,85%,95%)]">
-      <div className="max-w-md mx-auto px-4 pb-10 pt-6 space-y-8">
-        {/* HERO IMAGE */}
-        <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-[hsl(330,85%,75%)]">
-          <img src={heroImg} alt="Делаем видео для брендов которые смотрят" className="w-full block" />
-          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-center gap-2 text-[10px] font-black bg-background/85 backdrop-blur px-3 py-2 rounded-full text-foreground uppercase tracking-wider">
-            <Heart size={12} className={PINK_TEXT} fill="currentColor" />
-            Присоединяйся / Заказывай
-            <Heart size={12} className={PINK_TEXT} fill="currentColor" />
-          </div>
+    <div className="min-h-screen bg-gradient-to-b from-[hsl(335,90%,97%)] via-background to-[hsl(335,85%,95%)] overflow-hidden">
+      <div className="max-w-md mx-auto px-4 pb-10 pt-2 space-y-7">
+        {/* HERO IMAGE — blended into background, no frame */}
+        <div className="relative -mx-4 -mt-2">
+          <img
+            src={heroImg}
+            alt="Делаем видео для брендов которые смотрят"
+            className="w-full block"
+            style={{
+              WebkitMaskImage:
+                'radial-gradient(ellipse 100% 88% at 50% 45%, #000 60%, transparent 100%)',
+              maskImage:
+                'radial-gradient(ellipse 100% 88% at 50% 45%, #000 60%, transparent 100%)',
+            }}
+          />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-[hsl(335,90%,97%)] pointer-events-none" />
         </div>
+
+        {/* PRIMARY CTA — right under hero */}
+        <a
+          href="#order-form"
+          className={`-mt-4 group relative block ${PINK} text-white rounded-3xl p-5 text-center shadow-2xl overflow-hidden active:scale-[0.98] transition-transform`}
+        >
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-2xl" />
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+          <div className="relative flex items-center justify-center gap-2">
+            <Flame size={22} />
+            <span className="text-base font-black uppercase tracking-wider">Заказать ролик</span>
+            <TrendingUp size={22} />
+          </div>
+          <div className="relative text-[11px] font-bold opacity-95 mt-1.5 uppercase tracking-wider">
+            охваты · клиенты · продажи
+          </div>
+        </a>
 
         {/* HOOK */}
         <div className="text-center space-y-2">
@@ -111,16 +135,25 @@ const ReelsLanding = () => {
           ))}
         </div>
 
-        {/* PROMISE BANNER */}
-        <div className={`${PINK} text-white rounded-3xl p-5 text-center shadow-xl relative overflow-hidden`}>
-          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/15 rounded-full blur-xl" />
-          <Flame className="mx-auto mb-2" size={28} />
-          <div className="text-lg font-black uppercase leading-tight">
-            Получай массовые охваты
-            <br />и взрывной рост видео
+        {/* PANTHER — strength meets softness */}
+        <div className="relative flex justify-center -my-2">
+          <div className="absolute inset-x-8 bottom-6 h-16 bg-[hsl(330,85%,55%)]/30 blur-3xl rounded-full" />
+          <img
+            src={pantherImg}
+            alt="Сила, энергия и нежность"
+            loading="lazy"
+            width={1024}
+            height={1024}
+            className="relative w-72 h-auto drop-shadow-[0_20px_40px_hsl(330,85%,55%,0.35)]"
+          />
+        </div>
+
+        <div className="text-center -mt-4 space-y-1">
+          <div className="text-2xl font-black leading-tight">
+            Мощь × <span className={PINK_TEXT}>Нежность</span>
           </div>
-          <div className="text-[11px] font-bold opacity-95 mt-2">
-            Десятки нарезчиков создают ролики под ваш бренд
+          <div className="text-xs text-muted-foreground font-semibold px-6">
+            Строгий подход к качеству. Тёплый подход к людям.
           </div>
         </div>
 
@@ -140,7 +173,7 @@ const ReelsLanding = () => {
         </div>
 
         {/* ORDER FORM */}
-        <div className="bg-card rounded-3xl p-5 shadow-xl border-4 border-[hsl(330,85%,75%)] space-y-4">
+        <div id="order-form" className="bg-card rounded-3xl p-5 shadow-xl border-4 border-[hsl(330,85%,75%)] space-y-4 scroll-mt-4">
           <div className="text-center space-y-1">
             <div className={`inline-flex items-center gap-1 ${PINK} text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full`}>
               <Sparkles size={12} /> Закажи ролик
