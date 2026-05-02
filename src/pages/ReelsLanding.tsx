@@ -76,17 +76,32 @@ const ReelsLanding = () => {
         {/* PRIMARY CTA — right under hero */}
         <a
           href="#order-form"
-          className={`-mt-4 group relative block ${PINK} text-white rounded-3xl p-5 text-center shadow-2xl overflow-hidden active:scale-[0.98] transition-transform`}
+          className="-mt-4 group relative block rounded-3xl p-[2px] cta-pulse active:scale-[0.97] transition-transform"
+          style={{
+            background:
+              'linear-gradient(135deg, hsl(330 95% 70%), hsl(330 85% 50%) 45%, hsl(285 85% 55%) 100%)',
+          }}
         >
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-2xl" />
-          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-          <div className="relative flex items-center justify-center gap-2">
-            <Flame size={22} />
-            <span className="text-base font-black uppercase tracking-wider">Заказать ролик</span>
-            <TrendingUp size={22} />
-          </div>
-          <div className="relative text-[11px] font-bold opacity-95 mt-1.5 uppercase tracking-wider">
-            охваты · клиенты · продажи
+          <div
+            className="cta-shine relative overflow-hidden rounded-[22px] py-5 px-6 text-center text-white"
+            style={{
+              background:
+                'linear-gradient(135deg, hsl(330 90% 60%) 0%, hsl(330 85% 50%) 50%, hsl(310 85% 48%) 100%)',
+            }}
+          >
+            <div className="absolute -top-12 -right-10 w-44 h-44 bg-white/25 rounded-full blur-2xl" />
+            <div className="absolute -bottom-14 -left-10 w-44 h-44 bg-white/15 rounded-full blur-2xl" />
+            <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-t-[22px] pointer-events-none" />
+            <div className="relative flex items-center justify-center gap-2.5">
+              <Flame size={24} className="drop-shadow" />
+              <span className="text-lg font-black uppercase tracking-wider drop-shadow-sm">
+                Отправить задание
+              </span>
+              <TrendingUp size={24} className="drop-shadow" />
+            </div>
+            <div className="relative text-[11px] font-bold opacity-95 mt-1.5 uppercase tracking-[0.15em]">
+              охваты · клиенты · продажи
+            </div>
           </div>
         </a>
 
