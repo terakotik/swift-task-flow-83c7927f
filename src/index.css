@@ -57,4 +57,29 @@
   .task-card:active {
     transform: scale(0.98);
   }
+
+  @keyframes cta-pulse {
+    0%, 100% {
+      box-shadow: 0 20px 40px -10px hsl(330 85% 55% / 0.55), 0 0 0 0 hsl(330 85% 55% / 0.5);
+      transform: translateY(0);
+    }
+    50% {
+      box-shadow: 0 28px 55px -10px hsl(330 85% 55% / 0.7), 0 0 0 14px hsl(330 85% 55% / 0);
+      transform: translateY(-3px);
+    }
+  }
+  @keyframes cta-shine {
+    0% { transform: translateX(-120%) skewX(-20deg); }
+    60%, 100% { transform: translateX(220%) skewX(-20deg); }
+  }
+  .cta-pulse { animation: cta-pulse 2.4s ease-in-out infinite; }
+  .cta-shine::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 40%; height: 100%;
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.45), transparent);
+    animation: cta-shine 2.8s ease-in-out infinite;
+    pointer-events: none;
+  }
 }
