@@ -556,7 +556,45 @@ export default function SuperAdmin() {
     });
   };
 
-  const eligiblePayoutUsers = profiles
+  const submitVideoEditTask = async () => {
+    if (!canManageTasks) {
+      toast({ title: 'Нет прав', description: 'Нужна роль admin', variant: 'destructive' });
+      return;
+    }
+    const name = veName.trim();
+    const desc = veDesc.trim();
+    const source = veSource.trim();
+    const ref = veRef.trim();
+    if (!name || !desc) {
+      toast({ title: 'Заполните название и описание', variant: 'destructive' });
+      return;
+    }
+    setVeSubmitting(true);
+    const task_id = 'videoedit_' + Date.now();
+    // Описание + ссылка на исходники складываем в одно поле description
+    const fullDesc = source
+      ? `${desc}\n\n📦 Исходники: ${source}`
+      : desc;
+    const { error } = await supabase.from('tasks').insert({
+      task_id,
+      name,
+      addr2: 'Монтаж видео',
+      task_type: 'video_edit',
+      description: fullDesc,
+      reference_link: ref || null,
+      created_by: user?.id ?? null,
+    });
+    setVeSubmitting(false);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setVeName(''); setVeDesc(''); setVeSource(''); setVeRef('');
+    await loadData();
+    toast({ title: 'Задание создано', description: `«${name}» доступно исполнителям` });
+  };
+
+
     .map(profile => {
       const stat = unpaidOfferStats[profile.user_id] || { withImage: 0, noImage: 0 };
       const totalTasks = stat.withImage + stat.noImage;
