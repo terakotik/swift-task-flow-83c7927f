@@ -135,16 +135,25 @@ const ReelsLanding = () => {
           ))}
         </div>
 
-        {/* PROMISE BANNER */}
-        <div className={`${PINK} text-white rounded-3xl p-5 text-center shadow-xl relative overflow-hidden`}>
-          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/15 rounded-full blur-xl" />
-          <Flame className="mx-auto mb-2" size={28} />
-          <div className="text-lg font-black uppercase leading-tight">
-            Получай массовые охваты
-            <br />и взрывной рост видео
+        {/* PANTHER — strength meets softness */}
+        <div className="relative flex justify-center -my-2">
+          <div className="absolute inset-x-8 bottom-6 h-16 bg-[hsl(330,85%,55%)]/30 blur-3xl rounded-full" />
+          <img
+            src={pantherImg}
+            alt="Сила, энергия и нежность"
+            loading="lazy"
+            width={1024}
+            height={1024}
+            className="relative w-72 h-auto drop-shadow-[0_20px_40px_hsl(330,85%,55%,0.35)]"
+          />
+        </div>
+
+        <div className="text-center -mt-4 space-y-1">
+          <div className="text-2xl font-black leading-tight">
+            Мощь × <span className={PINK_TEXT}>Нежность</span>
           </div>
-          <div className="text-[11px] font-bold opacity-95 mt-2">
-            Десятки нарезчиков создают ролики под ваш бренд
+          <div className="text-xs text-muted-foreground font-semibold px-6">
+            Строгий подход к качеству. Тёплый подход к людям.
           </div>
         </div>
 
