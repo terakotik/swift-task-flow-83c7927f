@@ -1002,6 +1002,8 @@ export default function AdminDashboard() {
               const { restaurant, street } = splitName(ct.tasks?.name ?? 'Задание');
               const isRejected = ct.status === 'rejected';
               const isReels = ct.tasks?.task_type === 'reels';
+              const isVideoEdit = ct.tasks?.task_type === 'video_edit';
+              const isVideoTask = isReels || isVideoEdit;
               return (
                 <div
                   key={ct.id}
@@ -1011,13 +1013,13 @@ export default function AdminDashboard() {
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      {isReels && (
+                      {isVideoTask && (
                         <span className="inline-block text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-warning/15 text-warning mb-1">
-                          🎬 Рилс · 200₽
+                          {isVideoEdit ? '🎞️ Монтаж видео · 200₽' : '🎬 Рилс · 200₽'}
                         </span>
                       )}
-                      <h3 className="font-black text-foreground text-sm uppercase">{isReels ? (ct.tasks?.name ?? 'Рилс') : restaurant}</h3>
-                      {!isReels && street && <p className="text-[10px] text-muted-foreground font-bold">{street}</p>}
+                      <h3 className="font-black text-foreground text-sm uppercase">{isVideoTask ? (ct.tasks?.name ?? (isVideoEdit ? 'Монтаж видео' : 'Рилс')) : restaurant}</h3>
+                      {!isVideoTask && street && <p className="text-[10px] text-muted-foreground font-bold">{street}</p>}
                       <p className="text-[9px] text-muted-foreground font-bold">Исполнитель: {ct.executor_name ? ct.executor_name.split('@')[0] : 'N/A'}</p>
                       <p className="text-[9px] text-muted-foreground font-bold">
                         Отправлено: {new Date(ct.created_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} МСК
@@ -1036,16 +1038,22 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                   </div>
-                  {!isReels && (
+                  {!isVideoTask && (
                     <div className="bg-muted rounded-xl p-3">
                       <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Номер заказа</p>
                       <p className="text-foreground font-black text-lg">{ct.order_number}</p>
                     </div>
                   )}
-                  {isReels && (
+                  {isVideoTask && (
                     <div className="bg-warning/10 border border-warning/20 rounded-xl p-3">
-                      <p className="text-[10px] font-black text-warning uppercase tracking-widest mb-1">Рилс на модерации</p>
-                      <p className="text-foreground text-xs font-bold">Исполнитель отправил рилс в Telegram. Проверьте видео и подтвердите.</p>
+                      <p className="text-[10px] font-black text-warning uppercase tracking-widest mb-1">
+                        {isVideoEdit ? 'Монтаж на модерации' : 'Рилс на модерации'}
+                      </p>
+                      <p className="text-foreground text-xs font-bold">
+                        {isVideoEdit
+                          ? 'Исполнитель отправил смонтированное видео в Telegram. Проверьте и подтвердите.'
+                          : 'Исполнитель отправил рилс в Telegram. Проверьте видео и подтвердите.'}
+                      </p>
                     </div>
                   )}
                   {isRejected && ct.reject_reason && (
@@ -1057,13 +1065,13 @@ export default function AdminDashboard() {
                   {(ct.status === 'pending' || ct.status === 'accepted') && (
                     <div className="space-y-2">
                       <div className="flex gap-2">
-                        {ct.status === 'pending' && !isReels && (
+                        {ct.status === 'pending' && !isVideoTask && (
                           <Button onClick={() => acceptTask(ct.id)} variant="outline" className="flex-1 font-bold text-xs">
                             Принял заказ
                           </Button>
                         )}
                         <Button onClick={() => completeTask(ct)} className="flex-1 font-bold text-xs bg-accent text-accent-foreground hover:bg-accent/90">
-                          {isReels ? 'Подтвердить +200₽' : 'Готово ✓'}
+                          {isVideoTask ? 'Подтвердить +200₽' : 'Готово ✓'}
                         </Button>
                       </div>
                       <Button
