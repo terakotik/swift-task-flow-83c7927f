@@ -746,6 +746,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               const hasTimer = !!task.expires_at;
               const isImage = task.task_type === 'image' && task.image_url;
               const isReels = task.task_type === 'reels';
+              const isVideoEdit = task.task_type === 'video_edit';
+              const isVideoTask = isReels || isVideoEdit;
               return (
                 <div
                   key={task.id}
@@ -760,16 +762,18 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                         className="w-14 h-14 rounded-xl object-cover bg-muted shrink-0"
                       />
                     )}
-                    {isReels && (
+                    {isVideoTask && (
                       <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-warning/30 to-primary/30 flex items-center justify-center text-warning shrink-0 text-2xl">
-                        🎬
+                        {isVideoEdit ? '🎞️' : '🎬'}
                       </div>
                     )}
                     <div className="min-w-0">
-                      {isReels ? (
+                      {isVideoTask ? (
                         <>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-warning/15 text-warning">Рилс · 200₽</span>
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-warning/15 text-warning">
+                              {isVideoEdit ? 'Монтаж · 200₽' : 'Рилс · 200₽'}
+                            </span>
                           </div>
                           <h3 className="font-black text-foreground text-sm uppercase mt-1">{task.name}</h3>
                           <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight break-all">ID: {task.task_id}</p>
