@@ -792,9 +792,12 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                     <div className="min-w-0">
                       {isVideoTask ? (
                         <>
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-warning/15 text-warning">
-                              {isVideoEdit ? 'Монтаж · 200₽' : 'Рилс · 200₽'}
+                              {isVideoEdit ? '🎞️ Монтаж · 200₽' : '🎬 Рилс · 200₽'}
+                            </span>
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                              +200₽ / 5K 👁
                             </span>
                           </div>
                           <h3 className="font-black text-foreground text-sm uppercase mt-1">{task.name}</h3>
