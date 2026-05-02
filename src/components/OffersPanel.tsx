@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { X, Utensils, MessageSquare, CheckCircle2, Lock, Video } from 'lucide-react';
+import { X, Utensils, MessageSquare, CheckCircle2, Lock, Video, Film } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
