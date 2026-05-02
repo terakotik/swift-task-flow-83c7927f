@@ -451,9 +451,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
 
                 <div className="rounded-2xl bg-accent/10 border border-accent/30 p-4 text-[12px] font-bold text-foreground/90 leading-relaxed space-y-1">
                   <div className="text-[10px] font-black uppercase tracking-widest text-accent mb-1">Как платим</div>
-                  <div>💰 <span className="text-accent font-black">200₽</span> сразу после модерации</div>
+                  <div>💰 <span className="text-accent font-black">200₽</span> за видеоролик</div>
                   <div>🔥 <span className="text-warning font-black">+200₽</span> за каждые <strong>5 000 просмотров</strong></div>
-                  <div>💎 <span className="text-primary font-black">+100%</span> от цены — бонус за вирусный ролик</div>
                 </div>
 
                 <Button
@@ -461,7 +460,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                   disabled={submitting}
                   className="w-full font-black uppercase bg-foreground text-background hover:bg-foreground/90 disabled:opacity-60 h-14 rounded-2xl text-base shadow-lg"
                 >
-                  {submitting ? 'Отправка...' : '✅ Готово, отправить на модерацию'}
+                  {submitting ? 'Отправка...' : 'Готово'}
                 </Button>
               </div>
             </div>
