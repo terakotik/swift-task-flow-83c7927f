@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, Archive, Undo2, Wrench } from 'lucide-react';
+import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, Archive, Undo2, Wrench, Film } from 'lucide-react';
 import { AdminPayoutRequests } from '@/components/AdminPayoutRequests';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
@@ -104,6 +104,12 @@ export default function SuperAdmin() {
   const [adjustReason, setAdjustReason] = useState('');
   // Balance history items in user history modal
   const [balanceHistoryItems, setBalanceHistoryItems] = useState<Array<{ id: string; delta: number; reason: string | null; created_at: string; new_balance: number }>>([]);
+  // Video edit task form
+  const [veName, setVeName] = useState('');
+  const [veDesc, setVeDesc] = useState('');
+  const [veSource, setVeSource] = useState('');
+  const [veRef, setVeRef] = useState('');
+  const [veSubmitting, setVeSubmitting] = useState(false);
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
