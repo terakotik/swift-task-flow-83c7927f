@@ -595,6 +595,7 @@ export default function SuperAdmin() {
   };
 
 
+  const eligiblePayoutUsers = profiles
     .map(profile => {
       const stat = unpaidOfferStats[profile.user_id] || { withImage: 0, noImage: 0 };
       const totalTasks = stat.withImage + stat.noImage;
