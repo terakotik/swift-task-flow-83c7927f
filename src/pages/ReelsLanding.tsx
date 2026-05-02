@@ -18,6 +18,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import heroImg from '@/assets/reels-hero.png';
+import pantherImg from '@/assets/reels-panther.png';
 
 const PINK = 'bg-[hsl(330,85%,55%)]';
 const PINK_TEXT = 'text-[hsl(330,85%,55%)]';
