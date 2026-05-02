@@ -377,8 +377,19 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
       const desc = (currentTask as any).description as string | null;
       const refLink = (currentTask as any).reference_link as string | null;
       const taskLabel = isVideoEdit ? '🎞️ Монтаж видео' : '🎬 Рилс';
-      const rewardLabel = isVideoEdit ? '200₽ за принятый монтаж' : '200₽ + бонус 200₽';
+      const rewardLabel = '200₽ + бонус за просмотры';
       const sectionLabel = isVideoEdit ? 'Что нужно смонтировать' : 'Что нужно снять / смонтировать';
+
+      // Простой markdown: **bold**, переносы строк сохраняются через whitespace-pre-wrap
+      const renderMd = (text: string) => {
+        const parts = text.split(/(\*\*[^*]+\*\*)/g);
+        return parts.map((p, i) => {
+          if (/^\*\*[^*]+\*\*$/.test(p)) {
+            return <strong key={i} className="font-black text-foreground">{p.slice(2, -2)}</strong>;
+          }
+          return <span key={i}>{p}</span>;
+        });
+      };
       return (
         <div className="max-w-md mx-auto min-h-screen p-4 space-y-4">
           <button
