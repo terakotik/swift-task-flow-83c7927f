@@ -192,6 +192,35 @@ const ReelsLanding = () => {
           </div>
         </div>
 
+        {/* REELS SHOWCASE — horizontal scroll */}
+        <div className="space-y-3 -mx-4">
+          <div className="px-4 flex items-center justify-between">
+            <h3 className="text-lg font-black uppercase">
+              Наши <span className={PINK_TEXT}>ролики</span>
+            </h3>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              ← смахни →
+            </span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-3 scrollbar-hide">
+            {['7628702684601699602', '7628702684601699602', '7628702684601699602', '7628702684601699602'].map((id, i) => (
+              <div
+                key={i}
+                className="snap-center shrink-0 w-[270px] rounded-3xl overflow-hidden border-4 border-[hsl(330,85%,75%)] shadow-xl bg-black"
+                style={{ aspectRatio: '9 / 16' }}
+              >
+                <iframe
+                  src={`https://www.tiktok.com/embed/v2/${id}?autoplay=0`}
+                  className="w-full h-full"
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                  title={`reel-${i}`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* STATS */}
         <div className="grid grid-cols-3 gap-2">
