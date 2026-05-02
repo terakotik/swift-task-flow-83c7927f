@@ -55,17 +55,40 @@ const ReelsLanding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(335,90%,97%)] via-background to-[hsl(335,85%,95%)]">
-      <div className="max-w-md mx-auto px-4 pb-10 pt-6 space-y-8">
-        {/* HERO IMAGE */}
-        <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-[hsl(330,85%,75%)]">
-          <img src={heroImg} alt="Делаем видео для брендов которые смотрят" className="w-full block" />
-          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-center gap-2 text-[10px] font-black bg-background/85 backdrop-blur px-3 py-2 rounded-full text-foreground uppercase tracking-wider">
-            <Heart size={12} className={PINK_TEXT} fill="currentColor" />
-            Присоединяйся / Заказывай
-            <Heart size={12} className={PINK_TEXT} fill="currentColor" />
-          </div>
+    <div className="min-h-screen bg-gradient-to-b from-[hsl(335,90%,97%)] via-background to-[hsl(335,85%,95%)] overflow-hidden">
+      <div className="max-w-md mx-auto px-4 pb-10 pt-2 space-y-7">
+        {/* HERO IMAGE — blended into background, no frame */}
+        <div className="relative -mx-4 -mt-2">
+          <img
+            src={heroImg}
+            alt="Делаем видео для брендов которые смотрят"
+            className="w-full block"
+            style={{
+              WebkitMaskImage:
+                'radial-gradient(ellipse 100% 88% at 50% 45%, #000 60%, transparent 100%)',
+              maskImage:
+                'radial-gradient(ellipse 100% 88% at 50% 45%, #000 60%, transparent 100%)',
+            }}
+          />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-[hsl(335,90%,97%)] pointer-events-none" />
         </div>
+
+        {/* PRIMARY CTA — right under hero */}
+        <a
+          href="#order-form"
+          className={`-mt-4 group relative block ${PINK} text-white rounded-3xl p-5 text-center shadow-2xl overflow-hidden active:scale-[0.98] transition-transform`}
+        >
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-2xl" />
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+          <div className="relative flex items-center justify-center gap-2">
+            <Flame size={22} />
+            <span className="text-base font-black uppercase tracking-wider">Заказать ролик</span>
+            <TrendingUp size={22} />
+          </div>
+          <div className="relative text-[11px] font-bold opacity-95 mt-1.5 uppercase tracking-wider">
+            охваты · клиенты · продажи
+          </div>
+        </a>
 
         {/* HOOK */}
         <div className="text-center space-y-2">
