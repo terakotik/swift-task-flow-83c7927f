@@ -420,7 +420,6 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
                   </div>
                   <div className="bg-background/15 backdrop-blur rounded-2xl p-3 space-y-1 text-[11px] font-bold">
                     <div className="flex items-center gap-2">🔥 <span>+200₽ за каждые <strong>5 000 просмотров</strong></span></div>
-                    <div className="flex items-center gap-2">💎 <span>+100% от цены за вирусный ролик</span></div>
                     <div className="opacity-80 pt-1">Чем больше просмотров — тем больше заработок 🚀</div>
                   </div>
                   <span className="text-[9px] bg-background/15 px-2 py-1 rounded font-black inline-block uppercase tracking-wider break-all">
