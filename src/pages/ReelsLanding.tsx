@@ -163,14 +163,6 @@ const ReelsLanding = () => {
           />
         </div>
 
-        <div className="text-center -mt-4 space-y-1">
-          <div className="text-2xl font-black leading-tight">
-            Мощь × <span className={PINK_TEXT}>Нежность</span>
-          </div>
-          <div className="text-xs text-muted-foreground font-semibold px-6">
-            Строгий подход к качеству. Тёплый подход к людям.
-          </div>
-        </div>
 
         {/* STATS */}
         <div className="grid grid-cols-3 gap-2">
