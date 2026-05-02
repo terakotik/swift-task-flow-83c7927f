@@ -8,6 +8,7 @@ import AdminAuth from "./pages/AdminAuth";
 import UserAuth from "./pages/UserAuth";
 import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound";
+import ReelsLanding from "./pages/ReelsLanding";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/adminus" element={<AdminAuth />} />
           <Route path="/uzero" element={<UserAuth />} />
           <Route path="/superadmin" element={<SuperAdmin />} />
+          <Route path="/reels" element={<ReelsLanding />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

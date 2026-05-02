@@ -260,7 +260,21 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
         .limit(100),
     ]);
     if (data) {
-      setCompletedIds(new Set(data.map(d => d.task_id)));
+      // Видео-задания (reels / video_edit) не блокируем — их можно выполнять много раз
+      const blockedTaskIds = (data as any[])
+        .filter(d => {
+          const tt = (d as any).tasks?.task_type;
+          // task_type не выбрано выше — фильтруем отдельно ниже через tasks карту
+          return true;
+        })
+        .map(d => d.task_id);
+      // Получаем типы заданий из текущего списка tasks
+      const taskTypeMap = new Map(tasks.map(t => [t.id, t.task_type]));
+      const filteredIds = blockedTaskIds.filter(id => {
+        const tt = taskTypeMap.get(id);
+        return tt !== 'reels' && tt !== 'video_edit';
+      });
+      setCompletedIds(new Set(filteredIds));
       setMyCompleted(data as any);
     }
     setBalanceHistory((bh as any) ?? []);
@@ -362,7 +376,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
       });
       return;
     }
-    setCompletedIds(prev => new Set(prev).add(currentTask.id));
+    // Видео-задания (reels / video_edit) можно выполнять многократно — НЕ помечаем как завершённое
     setReelsSubmitted(true);
     loadCompletedTasks();
   };
