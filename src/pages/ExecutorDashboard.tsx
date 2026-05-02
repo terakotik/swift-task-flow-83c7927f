@@ -400,59 +400,71 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
           </button>
 
           {!reelsSubmitted ? (
-            <div className="bg-card rounded-3xl p-6 shadow-sm border border-border space-y-5">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest bg-warning/15 text-warning px-2 py-1 rounded-full">
-                  {taskLabel}
-                </span>
-                <span className="text-[10px] font-black text-accent">{rewardLabel}</span>
-              </div>
-              <div>
-                <h2 className="text-xl font-black text-foreground">{currentTask.name}</h2>
-                <span className="text-[10px] bg-muted px-2 py-1 rounded text-muted-foreground font-black mt-2 inline-block uppercase tracking-wider break-all">
-                  ID: {currentTask.task_id}
-                </span>
-              </div>
-
-              {desc && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-primary uppercase tracking-widest">{sectionLabel}</label>
-                  <div className="rounded-2xl bg-muted/60 border border-border p-4 text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                    {desc}
+            <div className="bg-card rounded-3xl shadow-lg border border-border overflow-hidden">
+              {/* Hero — мотивация заработать */}
+              <div className="relative p-5 bg-gradient-to-br from-warning via-accent to-primary text-primary-foreground overflow-hidden">
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-background/10 rounded-full blur-2xl" />
+                <div className="relative space-y-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-black uppercase tracking-widest bg-background/25 backdrop-blur px-2 py-1 rounded-full">
+                      {taskLabel}
+                    </span>
+                    <span className="text-[10px] font-black bg-background/25 backdrop-blur px-2 py-1 rounded-full">
+                      {rewardLabel}
+                    </span>
                   </div>
+                  <h2 className="text-2xl font-black leading-tight">{currentTask.name}</h2>
+                  <div className="flex items-end gap-2">
+                    <span className="text-5xl font-black leading-none">200₽</span>
+                    <span className="text-xs font-bold opacity-90 pb-1">базовая оплата</span>
+                  </div>
+                  <div className="bg-background/15 backdrop-blur rounded-2xl p-3 space-y-1 text-[11px] font-bold">
+                    <div className="flex items-center gap-2">🔥 <span>+200₽ за каждые <strong>5 000 просмотров</strong></span></div>
+                    <div className="flex items-center gap-2">💎 <span>+100% от цены за вирусный ролик</span></div>
+                    <div className="opacity-80 pt-1">Чем больше просмотров — тем больше заработок 🚀</div>
+                  </div>
+                  <span className="text-[9px] bg-background/15 px-2 py-1 rounded font-black inline-block uppercase tracking-wider break-all">
+                    ID: {currentTask.task_id}
+                  </span>
                 </div>
-              )}
-
-              {refLink && (
-                <a
-                  href={refLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center w-full gap-3 bg-primary text-primary-foreground font-black py-4 rounded-2xl shadow-sm active:scale-95 transition-transform text-sm uppercase"
-                >
-                  Открыть референс
-                </a>
-              )}
-
-              <div className="rounded-2xl bg-accent/10 border border-accent/20 p-4 text-[11px] font-bold text-foreground/80 leading-relaxed">
-                {isVideoEdit ? (
-                  <>💰 <span className="text-accent">200₽</span> за принятый монтаж видео после модерации админом.</>
-                ) : (
-                  <>
-                    💰 <span className="text-accent">200₽</span> за принятый рилс
-                    <br />
-                    🔥 <span className="text-warning">+200₽</span> бонус, если рилс наберёт <strong>5000+ просмотров</strong>
-                  </>
-                )}
               </div>
 
-              <Button
-                onClick={submitReels}
-                disabled={submitting}
-                className="w-full font-black uppercase bg-foreground text-background hover:bg-foreground/90 disabled:opacity-60 h-14 rounded-2xl text-base"
-              >
-                {submitting ? 'Отправка...' : 'Готово'}
-              </Button>
+              <div className="p-5 space-y-5">
+                {desc && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-primary uppercase tracking-widest">{sectionLabel}</label>
+                    <div className="rounded-2xl bg-muted/60 border border-border p-4 text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                      {renderMd(desc)}
+                    </div>
+                  </div>
+                )}
+
+                {refLink && (
+                  <a
+                    href={refLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-full gap-3 bg-primary text-primary-foreground font-black py-4 rounded-2xl shadow-sm active:scale-95 transition-transform text-sm uppercase"
+                  >
+                    Открыть референс / исходники
+                  </a>
+                )}
+
+                <div className="rounded-2xl bg-accent/10 border border-accent/30 p-4 text-[12px] font-bold text-foreground/90 leading-relaxed space-y-1">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-accent mb-1">Как платим</div>
+                  <div>💰 <span className="text-accent font-black">200₽</span> сразу после модерации</div>
+                  <div>🔥 <span className="text-warning font-black">+200₽</span> за каждые <strong>5 000 просмотров</strong></div>
+                  <div>💎 <span className="text-primary font-black">+100%</span> от цены — бонус за вирусный ролик</div>
+                </div>
+
+                <Button
+                  onClick={submitReels}
+                  disabled={submitting}
+                  className="w-full font-black uppercase bg-foreground text-background hover:bg-foreground/90 disabled:opacity-60 h-14 rounded-2xl text-base shadow-lg"
+                >
+                  {submitting ? 'Отправка...' : '✅ Готово, отправить на модерацию'}
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="bg-card rounded-3xl p-6 shadow-sm border border-border space-y-5 text-center">
@@ -475,10 +487,9 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               >
                 Написать админу в Telegram
               </a>
-              <p className="text-[10px] text-muted-foreground font-bold">
-                {isVideoEdit
-                  ? 'После модерации админ начислит 200₽ на ваш баланс.'
-                  : 'После модерации админ начислит 200₽ на ваш баланс. Если рилс наберёт 5000+ просмотров — пришлите статистику админу для бонуса +200₽.'}
+              <p className="text-[10px] text-muted-foreground font-bold leading-relaxed">
+                После модерации админ начислит <span className="text-accent font-black">200₽</span> на ваш баланс.
+                <br />За каждые <span className="text-warning font-black">5 000 просмотров</span> — ещё <span className="text-warning font-black">+200₽</span> (пришлите статистику админу).
               </p>
               <Button
                 variant="outline"
