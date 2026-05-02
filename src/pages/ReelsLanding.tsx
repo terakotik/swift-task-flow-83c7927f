@@ -150,8 +150,8 @@ const ReelsLanding = () => {
           ))}
         </div>
 
-        {/* PANTHER — strength meets softness */}
-        <div className="relative flex justify-center -my-2">
+        {/* PANTHER — strength meets softness, with floating reactions */}
+        <div className="relative flex justify-center -my-2 h-80">
           <div className="absolute inset-x-8 bottom-6 h-16 bg-[hsl(330,85%,55%)]/30 blur-3xl rounded-full" />
           <img
             src={pantherImg}
@@ -161,6 +161,35 @@ const ReelsLanding = () => {
             height={1024}
             className="relative w-72 h-auto drop-shadow-[0_20px_40px_hsl(330,85%,55%,0.35)]"
           />
+
+          {/* Floating reactions overlay */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            {[
+              { type: 'comment', text: '🔥 Огонь!', left: '8%',  bottom: '18%', delay: '0s',   dur: '4.5s', dx1: '6px',  dx2: '-14px', bg: 'bg-white',                  fg: 'text-[hsl(330,85%,45%)]' },
+              { type: 'like',    text: '❤️ +128',  left: '72%', bottom: '22%', delay: '0.6s', dur: '4.2s', dx1: '-8px', dx2: '12px',  bg: 'bg-[hsl(330,85%,55%)]',     fg: 'text-white' },
+              { type: 'views',   text: '👁 12.4K', left: '4%',  bottom: '40%', delay: '1.2s', dur: '4.8s', dx1: '10px', dx2: '-6px',  bg: 'bg-white',                  fg: 'text-[hsl(285,70%,45%)]' },
+              { type: 'comment', text: '😍 Wow',   left: '78%', bottom: '45%', delay: '1.8s', dur: '4.4s', dx1: '-12px',dx2: '8px',   bg: 'bg-[hsl(48,100%,55%)]',     fg: 'text-[hsl(220,30%,15%)]' },
+              { type: 'like',    text: '💖',        left: '20%', bottom: '12%', delay: '2.2s', dur: '3.8s', dx1: '14px', dx2: '-10px', bg: 'bg-white',                  fg: 'text-[hsl(330,90%,55%)]' },
+              { type: 'views',   text: '🚀 Вирус',  left: '60%', bottom: '10%', delay: '2.8s', dur: '4.6s', dx1: '-6px', dx2: '14px',  bg: 'bg-[hsl(285,75%,55%)]',     fg: 'text-white' },
+              { type: 'comment', text: '👏 Класс',  left: '38%', bottom: '50%', delay: '3.2s', dur: '4.3s', dx1: '8px',  dx2: '-8px',  bg: 'bg-white',                  fg: 'text-[hsl(330,85%,45%)]' },
+              { type: 'like',    text: '❤️ +56',   left: '14%', bottom: '60%', delay: '3.8s', dur: '4.1s', dx1: '-10px',dx2: '6px',   bg: 'bg-[hsl(330,85%,55%)]',     fg: 'text-white' },
+            ].map((b, i) => (
+              <div
+                key={i}
+                className={`absolute anim-float ${b.bg} ${b.fg} px-2.5 py-1 rounded-full text-[11px] font-black shadow-lg whitespace-nowrap border border-white/60`}
+                style={{
+                  left: b.left,
+                  bottom: b.bottom,
+                  animationDelay: b.delay,
+                  animationDuration: b.dur,
+                  ['--dx-1' as any]: b.dx1,
+                  ['--dx-2' as any]: b.dx2,
+                }}
+              >
+                {b.text}
+              </div>
+            ))}
+          </div>
         </div>
 
 
