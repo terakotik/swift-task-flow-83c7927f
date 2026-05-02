@@ -19,6 +19,10 @@ import {
 } from 'lucide-react';
 import heroImg from '@/assets/reels-hero.png';
 import pantherImg from '@/assets/reels-panther.png';
+import reel1 from '@/assets/reel-1.jpg';
+import reel2 from '@/assets/reel-2.jpg';
+import reel3 from '@/assets/reel-3.jpg';
+import reel4 from '@/assets/reel-4.jpg';
 
 const PINK = 'bg-[hsl(330,85%,55%)]';
 const PINK_TEXT = 'text-[hsl(330,85%,55%)]';
