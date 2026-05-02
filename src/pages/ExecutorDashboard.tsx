@@ -362,7 +362,7 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
       });
       return;
     }
-    setCompletedIds(prev => new Set(prev).add(currentTask.id));
+    // Видео-задания (reels / video_edit) можно выполнять многократно — НЕ помечаем как завершённое
     setReelsSubmitted(true);
     loadCompletedTasks();
   };
