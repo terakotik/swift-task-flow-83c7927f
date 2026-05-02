@@ -345,7 +345,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
     }
     if (!user) return;
     setSubmitting(true);
-    const orderNumber = 'reels-' + Date.now().toString(36);
+    const orderPrefix = currentTask.task_type === 'video_edit' ? 'videoedit-' : 'reels-';
+    const orderNumber = orderPrefix + Date.now().toString(36);
     const { error } = await supabase.from('completed_tasks').insert({
       task_id: currentTask.id,
       user_id: user.id,
@@ -368,11 +369,16 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
 
   if (currentTask) {
     const isReels = currentTask.task_type === 'reels';
+    const isVideoEdit = currentTask.task_type === 'video_edit';
+    const isVideoTask = isReels || isVideoEdit;
     const isImage = currentTask.task_type === 'image' && currentTask.image_url;
 
-    if (isReels) {
+    if (isVideoTask) {
       const desc = (currentTask as any).description as string | null;
       const refLink = (currentTask as any).reference_link as string | null;
+      const taskLabel = isVideoEdit ? '🎞️ Монтаж видео' : '🎬 Рилс';
+      const rewardLabel = isVideoEdit ? '200₽ за принятый монтаж' : '200₽ + бонус 200₽';
+      const sectionLabel = isVideoEdit ? 'Что нужно смонтировать' : 'Что нужно снять / смонтировать';
       return (
         <div className="max-w-md mx-auto min-h-screen p-4 space-y-4">
           <button
