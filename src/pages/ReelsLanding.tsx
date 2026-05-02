@@ -19,6 +19,10 @@ import {
 } from 'lucide-react';
 import heroImg from '@/assets/reels-hero.png';
 import pantherImg from '@/assets/reels-panther.png';
+import reel1 from '@/assets/reel-1.jpg';
+import reel2 from '@/assets/reel-2.jpg';
+import reel3 from '@/assets/reel-3.jpg';
+import reel4 from '@/assets/reel-4.jpg';
 
 const PINK = 'bg-[hsl(330,85%,55%)]';
 const PINK_TEXT = 'text-[hsl(330,85%,55%)]';
@@ -192,31 +196,45 @@ const ReelsLanding = () => {
           </div>
         </div>
 
-        {/* REELS SHOWCASE — horizontal scroll */}
+        {/* REELS SHOWCASE — horizontal scroll of results */}
         <div className="space-y-3 -mx-4">
           <div className="px-4 flex items-center justify-between">
             <h3 className="text-lg font-black uppercase">
-              Наши <span className={PINK_TEXT}>ролики</span>
+              Наши <span className={PINK_TEXT}>результаты</span>
             </h3>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               ← смахни →
             </span>
           </div>
           <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-3 scrollbar-hide">
-            {['7628702684601699602', '7628702684601699602', '7628702684601699602', '7628702684601699602'].map((id, i) => (
+            {[
+              { img: reel1, likes: '6 959', comments: '46', saves: '303' },
+              { img: reel2, likes: '474',   comments: '5',  saves: '97'  },
+              { img: reel3, likes: '283',   comments: '3',  saves: '20'  },
+              { img: reel4, likes: '91',    comments: '4',  saves: '32'  },
+            ].map((r, i) => (
               <div
                 key={i}
-                className="snap-center shrink-0 w-[270px] rounded-3xl overflow-hidden border-4 border-[hsl(330,85%,75%)] shadow-xl bg-black"
+                className="snap-center shrink-0 w-[260px] rounded-3xl overflow-hidden border-4 border-[hsl(330,85%,75%)] shadow-xl bg-black relative"
                 style={{ aspectRatio: '9 / 16' }}
               >
-                <iframe
-                  src={`https://www.tiktok.com/embed/v2/${id}?autoplay=0`}
-                  className="w-full h-full"
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                  loading="lazy"
-                  title={`reel-${i}`}
-                />
+                <img src={r.img} alt={`Результат ролика ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/85 via-black/55 to-transparent">
+                  <div className="flex items-center justify-between gap-2 text-white">
+                    <div className="flex items-center gap-1">
+                      <Heart size={16} className="fill-[hsl(0,90%,60%)] text-[hsl(0,90%,60%)]" />
+                      <span className="text-sm font-black">{r.likes}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-base">💬</span>
+                      <span className="text-sm font-black">{r.comments}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-base">🔖</span>
+                      <span className="text-sm font-black">{r.saves}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
