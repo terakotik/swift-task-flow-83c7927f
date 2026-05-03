@@ -85,7 +85,11 @@ export default function SuperAdmin() {
   const [adjustAmounts, setAdjustAmounts] = useState<Record<string, string>>({});
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
+  // Открытая партия (held_at IS NULL) — то, что копится сейчас
   const [unpaidOfferStats, setUnpaidOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
+  // Замороженная партия (held_at IS NOT NULL) — ждёт выплаты
+  const [heldOfferStats, setHeldOfferStats] = useState<Record<string, { withImage: number; noImage: number; heldAt: string | null }>>({});
+  const [freezing, setFreezing] = useState(false);
   const [bonusTotals, setBonusTotals] = useState<Record<string, number>>({});
   const [taskEarningTotals, setTaskEarningTotals] = useState<Record<string, number>>({});
   const [weeklyStats, setWeeklyStats] = useState<Array<{ date: string; label: string; withImage: number; noImage: number; total: number; revenue: number }>>([]);
