@@ -662,7 +662,17 @@ export default function SuperAdmin() {
     }
     setAdjustingId(profile.user_id);
     if (profile.payout_hold) {
-      // снять холд
+      // снять холд = деньги выплачены: помечаем done-задания как paid + чистим холд
+      const { error: tasksError } = await supabase
+        .from('completed_tasks')
+        .update({ status: 'paid' })
+        .eq('user_id', profile.user_id)
+        .eq('status', 'done');
+      if (tasksError) {
+        setAdjustingId(null);
+        toast({ title: 'Ошибка', description: tasksError.message, variant: 'destructive' });
+        return;
+      }
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -679,7 +689,7 @@ export default function SuperAdmin() {
         return;
       }
       await loadData();
-      toast({ title: 'Холд снят' });
+      toast({ title: '✅ Выплачено', description: 'Холд снят, задания закрыты как оплаченные' });
     } else {
       const stat = unpaidOfferStats[profile.user_id] || { withImage: 0, noImage: 0 };
       const total = stat.withImage * 30 + stat.noImage * 20;
