@@ -635,12 +635,12 @@ export default function SuperAdmin() {
   };
 
 
+  // Открытая партия — задания, которые ещё не заморожены
   const eligiblePayoutUsers = profiles
     .map(profile => {
       const stat = unpaidOfferStats[profile.user_id] || { withImage: 0, noImage: 0 };
       const totalTasks = stat.withImage + stat.noImage;
       const payoutTotal = stat.withImage * 30 + stat.noImage * 20;
-
       return {
         profile,
         withImage: stat.withImage,
@@ -649,83 +649,84 @@ export default function SuperAdmin() {
         payoutTotal,
       };
     })
-    .filter(item => item.totalTasks >= 10 && !item.profile.payout_hold && !pendingPayoutByUser[item.profile.user_id])
+    .filter(item => item.totalTasks > 0)
     .sort((a, b) => b.payoutTotal - a.payoutTotal);
 
+  // Замороженная партия — то, что ждёт выплаты
   const heldUsers = profiles
-    .filter(p => p.payout_hold || pendingPayoutByUser[p.user_id])
     .map(p => {
-      const stat = unpaidOfferStats[p.user_id] || { withImage: 0, noImage: 0 };
+      const stat = heldOfferStats[p.user_id];
       const fromRequest = pendingPayoutByUser[p.user_id];
-      const isRequest = !p.payout_hold && !!fromRequest;
+      if (!stat && !fromRequest) return null;
+      const withImage = stat?.withImage || 0;
+      const noImage = stat?.noImage || 0;
+      const computed = withImage * 30 + noImage * 20;
       return {
         profile: p,
-        withImage: p.payout_hold ? (p.payout_hold_with_image || 0) : stat.withImage,
-        noImage: p.payout_hold ? (p.payout_hold_no_image || 0) : stat.noImage,
-        payoutTotal: p.payout_hold
-          ? (Number(p.payout_hold_amount) || 0)
-          : (fromRequest ? fromRequest.amount : stat.withImage * 30 + stat.noImage * 20),
-        isRequest,
+        withImage,
+        noImage,
+        payoutTotal: computed > 0 ? computed : (fromRequest?.amount || 0),
+        heldAt: stat?.heldAt || null,
+        isRequest: !stat && !!fromRequest,
       };
     })
+    .filter((x): x is NonNullable<typeof x> => x !== null && x.payoutTotal > 0)
     .sort((a, b) => b.payoutTotal - a.payoutTotal);
 
-  const toggleHold = async (profile: UserProfile) => {
+  // Заморозить всю текущую открытую партию
+  const freezeBatch = async () => {
     if (!isAdmin && !currentUserIsAdmin) {
       toast({ title: 'Нет прав', variant: 'destructive' });
       return;
     }
-    setAdjustingId(profile.user_id);
-    if (profile.payout_hold) {
-      // снять холд = деньги выплачены: помечаем done-задания как paid + чистим холд
-      const { error: tasksError } = await supabase
-        .from('completed_tasks')
-        .update({ status: 'paid' })
-        .eq('user_id', profile.user_id)
-        .eq('status', 'done');
-      if (tasksError) {
-        setAdjustingId(null);
-        toast({ title: 'Ошибка', description: tasksError.message, variant: 'destructive' });
-        return;
-      }
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          payout_hold: false,
-          payout_hold_at: null,
-          payout_hold_amount: 0,
-          payout_hold_with_image: 0,
-          payout_hold_no_image: 0,
-        })
-        .eq('user_id', profile.user_id);
-      setAdjustingId(null);
-      if (error) {
-        toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-        return;
-      }
-      await loadData();
-      toast({ title: '✅ Выплачено', description: 'Холд снят, задания закрыты как оплаченные' });
-    } else {
-      const stat = unpaidOfferStats[profile.user_id] || { withImage: 0, noImage: 0 };
-      const total = stat.withImage * 30 + stat.noImage * 20;
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          payout_hold: true,
-          payout_hold_at: new Date().toISOString(),
-          payout_hold_amount: total,
-          payout_hold_with_image: stat.withImage,
-          payout_hold_no_image: stat.noImage,
-        })
-        .eq('user_id', profile.user_id);
-      setAdjustingId(null);
-      if (error) {
-        toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-        return;
-      }
-      await loadData();
-      toast({ title: 'Холд включён', description: `${total}₽ зафиксировано` });
+    const totalUsers = eligiblePayoutUsers.length;
+    if (totalUsers === 0) {
+      toast({ title: 'Нечего замораживать' });
+      return;
     }
+    if (!confirm(`Заморозить текущую партию: ${totalUsers} юзер(ов). Новые задания пойдут в новую партию.`)) return;
+    setFreezing(true);
+    const { data, error } = await supabase.rpc('freeze_unpaid_batch');
+    setFreezing(false);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const r = data as any;
+    await loadData();
+    toast({ title: '🔒 Партия заморожена', description: `Заданий: ${r?.frozen ?? 0}` });
+  };
+
+  // Выплатить замороженную партию одному юзеру
+  const payHeldUser = async (profile: UserProfile, amount: number) => {
+    if (!isAdmin && !currentUserIsAdmin) {
+      toast({ title: 'Нет прав', variant: 'destructive' });
+      return;
+    }
+    if (!confirm(`Подтвердить выплату ${amount}₽ юзеру ${profile.display_name || profile.email || ''}?`)) return;
+    setAdjustingId(profile.user_id);
+    if (amount > 0) {
+      const { data: adjData, error: adjError } = await supabase.rpc('admin_adjust_balance', {
+        _user_id: profile.user_id,
+        _delta: -amount,
+        _reason: `Выплата ${amount}₽`,
+      });
+      const adj = adjData as any;
+      if (adjError || !adj?.ok) {
+        setAdjustingId(null);
+        toast({ title: 'Ошибка выплаты', description: adjError?.message || adj?.error, variant: 'destructive' });
+        return;
+      }
+    }
+    const { data, error } = await supabase.rpc('mark_user_batch_paid', { _user_id: profile.user_id });
+    setAdjustingId(null);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const r = data as any;
+    await loadData();
+    toast({ title: '✅ Выплачено', description: `Закрыто заданий: ${r?.paid ?? 0}` });
   };
 
 
