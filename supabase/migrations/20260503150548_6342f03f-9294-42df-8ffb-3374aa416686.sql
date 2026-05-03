@@ -1,0 +1,2 @@
+DELETE FROM public.completed_tasks WHERE id IN (SELECT ct.id FROM public.completed_tasks ct JOIN public.tasks t ON t.id = ct.task_id WHERE t.task_type = 'video_edit') OR order_number LIKE 'videoedit-%';
+DELETE FROM public.deleted_completed_tasks_log WHERE order_number LIKE 'videoedit-%';
