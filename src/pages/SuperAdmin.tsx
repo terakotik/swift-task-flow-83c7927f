@@ -242,13 +242,24 @@ export default function SuperAdmin() {
       taskTypeMap[t.id] = isImage ? 'withImage' : 'noImage';
     });
     const stats: Record<string, { withImage: number; noImage: number }> = {};
+    const held: Record<string, { withImage: number; noImage: number; heldAt: string | null }> = {};
     (completedDone ?? []).forEach((c: any) => {
       const kind = taskTypeMap[c.task_id];
       if (!kind) return;
-      if (!stats[c.user_id]) stats[c.user_id] = { withImage: 0, noImage: 0 };
-      stats[c.user_id][kind] += 1;
+      if (c.held_at) {
+        if (!held[c.user_id]) held[c.user_id] = { withImage: 0, noImage: 0, heldAt: c.held_at };
+        held[c.user_id][kind] += 1;
+        // запоминаем самую раннюю дату заморозки
+        if (!held[c.user_id].heldAt || new Date(c.held_at) < new Date(held[c.user_id].heldAt!)) {
+          held[c.user_id].heldAt = c.held_at;
+        }
+      } else {
+        if (!stats[c.user_id]) stats[c.user_id] = { withImage: 0, noImage: 0 };
+        stats[c.user_id][kind] += 1;
+      }
     });
     setUnpaidOfferStats(stats);
+    setHeldOfferStats(held);
 
     // Weekly stats: per-day completed tasks (last 7 days) + company revenue
     const COMPANY_IMAGE_PRICE = 100;
