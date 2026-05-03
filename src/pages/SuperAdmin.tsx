@@ -1336,7 +1336,8 @@ export default function SuperAdmin() {
               {(() => {
                 const stat = unpaidOfferStats[p.user_id] || { withImage: 0, noImage: 0 };
                 const totalUnpaid = stat.withImage + stat.noImage;
-                const showHold = (totalUnpaid >= 10) || p.payout_hold;
+                const hasPendingRequest = !!pendingPayoutByUser[p.user_id];
+                const showHold = ((totalUnpaid >= 10) || p.payout_hold) && !hasPendingRequest;
                 return (
                   <>
                     <div className="flex gap-2">
