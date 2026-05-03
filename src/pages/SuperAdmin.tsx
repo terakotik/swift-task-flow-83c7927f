@@ -1366,10 +1366,8 @@ export default function SuperAdmin() {
               </div>
 
               {(() => {
-                const stat = unpaidOfferStats[p.user_id] || { withImage: 0, noImage: 0 };
-                const totalUnpaid = stat.withImage + stat.noImage;
-                const hasPendingRequest = !!pendingPayoutByUser[p.user_id];
-                const showHold = ((totalUnpaid >= 10) || p.payout_hold) && !hasPendingRequest;
+                const heldStat = heldOfferStats[p.user_id];
+                const heldAmount = heldStat ? heldStat.withImage * 30 + heldStat.noImage * 20 : 0;
                 return (
                   <>
                     <div className="flex gap-2">
@@ -1390,19 +1388,14 @@ export default function SuperAdmin() {
                         <RotateCcw size={14} /> Выплата
                       </Button>
                     </div>
-                    {showHold && (
+                    {heldAmount > 0 && (
                       <Button
                         size="sm"
-                        variant="default"
-                        className={`w-full h-9 rounded-xl gap-2 font-black uppercase text-xs ${p.payout_hold ? 'bg-accent text-accent-foreground hover:bg-accent/90' : 'bg-warning text-warning-foreground hover:bg-warning/90'}`}
+                        className="w-full h-9 rounded-xl gap-2 font-black uppercase text-xs bg-accent text-accent-foreground hover:bg-accent/90"
                         disabled={adjustingId === p.user_id}
-                        onClick={() => toggleHold(p)}
+                        onClick={() => payHeldUser(p, heldAmount)}
                       >
-                        {p.payout_hold ? (
-                          <><CheckCircle size={14} /> Выплачено ({Number(p.payout_hold_amount) || 0}₽)</>
-                        ) : (
-                          <><Pause size={14} /> Холд ({stat.withImage * 30 + stat.noImage * 20}₽)</>
-                        )}
+                        <CheckCircle size={14} /> Выплачено по холду ({heldAmount}₽)
                       </Button>
                     )}
                   </>
