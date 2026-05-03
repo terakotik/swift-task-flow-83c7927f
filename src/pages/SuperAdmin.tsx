@@ -1361,13 +1361,13 @@ export default function SuperAdmin() {
                     {showHold && (
                       <Button
                         size="sm"
-                        variant={p.payout_hold ? 'default' : 'outline'}
-                        className={`w-full h-9 rounded-xl gap-2 font-black uppercase text-xs ${p.payout_hold ? 'bg-warning text-warning-foreground hover:bg-warning/90' : 'border-warning/50 text-warning hover:bg-warning/10 hover:text-warning'}`}
+                        variant="default"
+                        className={`w-full h-9 rounded-xl gap-2 font-black uppercase text-xs ${p.payout_hold ? 'bg-accent text-accent-foreground hover:bg-accent/90' : 'bg-warning text-warning-foreground hover:bg-warning/90'}`}
                         disabled={adjustingId === p.user_id}
                         onClick={() => toggleHold(p)}
                       >
                         {p.payout_hold ? (
-                          <><Play size={14} /> Снять холд ({Number(p.payout_hold_amount) || 0}₽)</>
+                          <><CheckCircle size={14} /> Выплачено ({Number(p.payout_hold_amount) || 0}₽)</>
                         ) : (
                           <><Pause size={14} /> Холд ({stat.withImage * 30 + stat.noImage * 20}₽)</>
                         )}
