@@ -115,6 +115,8 @@ export default function SuperAdmin() {
   const [veSource, setVeSource] = useState('');
   const [veRef, setVeRef] = useState('');
   const [veSubmitting, setVeSubmitting] = useState(false);
+  // Pending payout requests: user_id -> { id, amount }
+  const [pendingPayoutByUser, setPendingPayoutByUser] = useState<Record<string, { id: string; amount: number }>>({});
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
