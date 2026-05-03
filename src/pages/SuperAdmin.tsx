@@ -24,6 +24,11 @@ interface UserProfile {
   email: string | null;
   balance: number;
   created_at: string;
+  payout_hold?: boolean;
+  payout_hold_at?: string | null;
+  payout_hold_amount?: number;
+  payout_hold_with_image?: number;
+  payout_hold_no_image?: number;
 }
 
 interface UserRole {
