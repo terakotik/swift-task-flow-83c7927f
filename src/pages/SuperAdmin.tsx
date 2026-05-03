@@ -85,7 +85,11 @@ export default function SuperAdmin() {
   const [adjustAmounts, setAdjustAmounts] = useState<Record<string, string>>({});
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
+  // Открытая партия (held_at IS NULL) — то, что копится сейчас
   const [unpaidOfferStats, setUnpaidOfferStats] = useState<Record<string, { withImage: number; noImage: number }>>({});
+  // Замороженная партия (held_at IS NOT NULL) — ждёт выплаты
+  const [heldOfferStats, setHeldOfferStats] = useState<Record<string, { withImage: number; noImage: number; heldAt: string | null }>>({});
+  const [freezing, setFreezing] = useState(false);
   const [bonusTotals, setBonusTotals] = useState<Record<string, number>>({});
   const [taskEarningTotals, setTaskEarningTotals] = useState<Record<string, number>>({});
   const [weeklyStats, setWeeklyStats] = useState<Array<{ date: string; label: string; withImage: number; noImage: number; total: number; revenue: number }>>([]);
@@ -190,7 +194,7 @@ export default function SuperAdmin() {
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at, payout_hold, payout_hold_at, payout_hold_amount, payout_hold_with_image, payout_hold_no_image').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
-      supabase.from('completed_tasks').select('user_id, task_id').eq('status', 'done'),
+      supabase.from('completed_tasks').select('user_id, task_id, held_at').eq('status', 'done'),
       supabase.from('balance_history').select('user_id, delta, reason'),
       supabase.from('completed_tasks').select('task_id, completed_at, status').in('status', ['done', 'paid']).gte('completed_at', sinceDate.toISOString()),
       supabase.from('payout_requests').select('id, user_id, amount').eq('status', 'pending'),
@@ -238,13 +242,24 @@ export default function SuperAdmin() {
       taskTypeMap[t.id] = isImage ? 'withImage' : 'noImage';
     });
     const stats: Record<string, { withImage: number; noImage: number }> = {};
+    const held: Record<string, { withImage: number; noImage: number; heldAt: string | null }> = {};
     (completedDone ?? []).forEach((c: any) => {
       const kind = taskTypeMap[c.task_id];
       if (!kind) return;
-      if (!stats[c.user_id]) stats[c.user_id] = { withImage: 0, noImage: 0 };
-      stats[c.user_id][kind] += 1;
+      if (c.held_at) {
+        if (!held[c.user_id]) held[c.user_id] = { withImage: 0, noImage: 0, heldAt: c.held_at };
+        held[c.user_id][kind] += 1;
+        // запоминаем самую раннюю дату заморозки
+        if (!held[c.user_id].heldAt || new Date(c.held_at) < new Date(held[c.user_id].heldAt!)) {
+          held[c.user_id].heldAt = c.held_at;
+        }
+      } else {
+        if (!stats[c.user_id]) stats[c.user_id] = { withImage: 0, noImage: 0 };
+        stats[c.user_id][kind] += 1;
+      }
     });
     setUnpaidOfferStats(stats);
+    setHeldOfferStats(held);
 
     // Weekly stats: per-day completed tasks (last 7 days) + company revenue
     const COMPANY_IMAGE_PRICE = 100;
@@ -620,12 +635,12 @@ export default function SuperAdmin() {
   };
 
 
+  // Открытая партия — задания, которые ещё не заморожены
   const eligiblePayoutUsers = profiles
     .map(profile => {
       const stat = unpaidOfferStats[profile.user_id] || { withImage: 0, noImage: 0 };
       const totalTasks = stat.withImage + stat.noImage;
       const payoutTotal = stat.withImage * 30 + stat.noImage * 20;
-
       return {
         profile,
         withImage: stat.withImage,
@@ -634,83 +649,84 @@ export default function SuperAdmin() {
         payoutTotal,
       };
     })
-    .filter(item => item.totalTasks >= 10 && !item.profile.payout_hold && !pendingPayoutByUser[item.profile.user_id])
+    .filter(item => item.totalTasks > 0)
     .sort((a, b) => b.payoutTotal - a.payoutTotal);
 
+  // Замороженная партия — то, что ждёт выплаты
   const heldUsers = profiles
-    .filter(p => p.payout_hold || pendingPayoutByUser[p.user_id])
     .map(p => {
-      const stat = unpaidOfferStats[p.user_id] || { withImage: 0, noImage: 0 };
+      const stat = heldOfferStats[p.user_id];
       const fromRequest = pendingPayoutByUser[p.user_id];
-      const isRequest = !p.payout_hold && !!fromRequest;
+      if (!stat && !fromRequest) return null;
+      const withImage = stat?.withImage || 0;
+      const noImage = stat?.noImage || 0;
+      const computed = withImage * 30 + noImage * 20;
       return {
         profile: p,
-        withImage: p.payout_hold ? (p.payout_hold_with_image || 0) : stat.withImage,
-        noImage: p.payout_hold ? (p.payout_hold_no_image || 0) : stat.noImage,
-        payoutTotal: p.payout_hold
-          ? (Number(p.payout_hold_amount) || 0)
-          : (fromRequest ? fromRequest.amount : stat.withImage * 30 + stat.noImage * 20),
-        isRequest,
+        withImage,
+        noImage,
+        payoutTotal: computed > 0 ? computed : (fromRequest?.amount || 0),
+        heldAt: stat?.heldAt || null,
+        isRequest: !stat && !!fromRequest,
       };
     })
+    .filter((x): x is NonNullable<typeof x> => x !== null && x.payoutTotal > 0)
     .sort((a, b) => b.payoutTotal - a.payoutTotal);
 
-  const toggleHold = async (profile: UserProfile) => {
+  // Заморозить всю текущую открытую партию
+  const freezeBatch = async () => {
     if (!isAdmin && !currentUserIsAdmin) {
       toast({ title: 'Нет прав', variant: 'destructive' });
       return;
     }
-    setAdjustingId(profile.user_id);
-    if (profile.payout_hold) {
-      // снять холд = деньги выплачены: помечаем done-задания как paid + чистим холд
-      const { error: tasksError } = await supabase
-        .from('completed_tasks')
-        .update({ status: 'paid' })
-        .eq('user_id', profile.user_id)
-        .eq('status', 'done');
-      if (tasksError) {
-        setAdjustingId(null);
-        toast({ title: 'Ошибка', description: tasksError.message, variant: 'destructive' });
-        return;
-      }
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          payout_hold: false,
-          payout_hold_at: null,
-          payout_hold_amount: 0,
-          payout_hold_with_image: 0,
-          payout_hold_no_image: 0,
-        })
-        .eq('user_id', profile.user_id);
-      setAdjustingId(null);
-      if (error) {
-        toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-        return;
-      }
-      await loadData();
-      toast({ title: '✅ Выплачено', description: 'Холд снят, задания закрыты как оплаченные' });
-    } else {
-      const stat = unpaidOfferStats[profile.user_id] || { withImage: 0, noImage: 0 };
-      const total = stat.withImage * 30 + stat.noImage * 20;
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          payout_hold: true,
-          payout_hold_at: new Date().toISOString(),
-          payout_hold_amount: total,
-          payout_hold_with_image: stat.withImage,
-          payout_hold_no_image: stat.noImage,
-        })
-        .eq('user_id', profile.user_id);
-      setAdjustingId(null);
-      if (error) {
-        toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-        return;
-      }
-      await loadData();
-      toast({ title: 'Холд включён', description: `${total}₽ зафиксировано` });
+    const totalUsers = eligiblePayoutUsers.length;
+    if (totalUsers === 0) {
+      toast({ title: 'Нечего замораживать' });
+      return;
     }
+    if (!confirm(`Заморозить текущую партию: ${totalUsers} юзер(ов). Новые задания пойдут в новую партию.`)) return;
+    setFreezing(true);
+    const { data, error } = await supabase.rpc('freeze_unpaid_batch');
+    setFreezing(false);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const r = data as any;
+    await loadData();
+    toast({ title: '🔒 Партия заморожена', description: `Заданий: ${r?.frozen ?? 0}` });
+  };
+
+  // Выплатить замороженную партию одному юзеру
+  const payHeldUser = async (profile: UserProfile, amount: number) => {
+    if (!isAdmin && !currentUserIsAdmin) {
+      toast({ title: 'Нет прав', variant: 'destructive' });
+      return;
+    }
+    if (!confirm(`Подтвердить выплату ${amount}₽ юзеру ${profile.display_name || profile.email || ''}?`)) return;
+    setAdjustingId(profile.user_id);
+    if (amount > 0) {
+      const { data: adjData, error: adjError } = await supabase.rpc('admin_adjust_balance', {
+        _user_id: profile.user_id,
+        _delta: -amount,
+        _reason: `Выплата ${amount}₽`,
+      });
+      const adj = adjData as any;
+      if (adjError || !adj?.ok) {
+        setAdjustingId(null);
+        toast({ title: 'Ошибка выплаты', description: adjError?.message || adj?.error, variant: 'destructive' });
+        return;
+      }
+    }
+    const { data, error } = await supabase.rpc('mark_user_batch_paid', { _user_id: profile.user_id });
+    setAdjustingId(null);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const r = data as any;
+    await loadData();
+    toast({ title: '✅ Выплачено', description: `Закрыто заданий: ${r?.paid ?? 0}` });
   };
 
 
@@ -922,55 +938,71 @@ export default function SuperAdmin() {
                 <p className="text-[10px] font-black text-muted-foreground uppercase">Всего неоплаченных заданий</p>
                 <p className="text-lg font-black text-foreground">{taskTotal}</p>
               </div>
+
+              <Button
+                onClick={freezeBatch}
+                disabled={freezing || taskTotal === 0}
+                className="w-full h-11 rounded-2xl font-black uppercase gap-2 bg-warning text-warning-foreground hover:bg-warning/90"
+              >
+                <Pause size={16} /> {freezing ? 'Замораживаем...' : `Заморозить партию (${userTotal}₽)`}
+              </Button>
+              <p className="text-[10px] text-muted-foreground font-bold">
+                После заморозки эта сумма уйдёт в раздел «На холде». Новые задания будут копиться в новую партию с нуля.
+              </p>
             </section>
           );
         })()}
 
-        {heldUsers.length > 0 && (
+        {heldUsers.length > 0 && (() => {
+          const heldTotal = heldUsers.reduce((s, u) => s + u.payoutTotal, 0);
+          return (
           <section className="bg-warning/10 rounded-2xl border-2 border-warning/40 shadow-sm p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Pause size={18} className="text-warning" />
-              <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
-                На холде ({heldUsers.length})
-              </h2>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Pause size={18} className="text-warning" />
+                <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
+                  На холде ({heldUsers.length})
+                </h2>
+              </div>
+              <p className="text-lg font-black text-warning">{heldTotal}₽</p>
             </div>
             <p className="text-[10px] text-muted-foreground font-bold">
-              Эти юзеры ждут выплату. Сумма зафиксирована, новые задания после холда сюда не попадают.
+              Замороженная партия. Гасите по одному — нажимайте «Выплачено», когда отправили деньги конкретному юзеру. Новые задания идут в новую партию выше и сюда не попадают.
             </p>
             <div className="space-y-2">
-              {heldUsers.map(({ profile, withImage, noImage, payoutTotal, isRequest }) => (
+              {heldUsers.map(({ profile, withImage, noImage, payoutTotal, isRequest, heldAt }) => (
                 <div key={profile.user_id} className="bg-card rounded-xl p-3 flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="font-black text-foreground text-sm truncate">{profile.display_name || profile.email || '—'}</p>
                     <p className="text-[10px] text-muted-foreground font-bold">
-                      📷{withImage} · 📝{noImage} · {isRequest ? 'заявка на выплату' : `с ${profile.payout_hold_at ? new Date(profile.payout_hold_at).toLocaleDateString('ru-RU') : '—'}`}
+                      📷{withImage} · 📝{noImage} · {isRequest ? 'заявка на выплату' : `заморожено ${heldAt ? new Date(heldAt).toLocaleDateString('ru-RU') : '—'}`}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-lg font-black text-warning">{payoutTotal}₽</p>
                   </div>
                   <div className="flex flex-col gap-1 shrink-0">
-                    {!isRequest && (
+                    {isRequest ? (
+                      <span className="text-[9px] font-black uppercase text-warning bg-warning/15 rounded-full px-2 py-1 text-center">
+                        ждёт выплаты
+                      </span>
+                    ) : (
                       <Button
                         size="sm"
                         className="h-8 rounded-xl px-2 text-[10px] font-black gap-1 bg-accent text-accent-foreground hover:bg-accent/90"
-                        onClick={() => toggleHold(profile)}
+                        onClick={() => payHeldUser(profile, payoutTotal)}
                         disabled={adjustingId === profile.user_id}
                       >
                         <CheckCircle size={11} /> Выплачено
                       </Button>
-                    )}
-                    {isRequest && (
-                      <span className="text-[9px] font-black uppercase text-warning bg-warning/15 rounded-full px-2 py-1 text-center">
-                        ждёт выплаты
-                      </span>
                     )}
                   </div>
                 </div>
               ))}
             </div>
           </section>
-        )}
+          );
+        })()}
 
         <AdminPayoutRequests />
 
@@ -1334,10 +1366,8 @@ export default function SuperAdmin() {
               </div>
 
               {(() => {
-                const stat = unpaidOfferStats[p.user_id] || { withImage: 0, noImage: 0 };
-                const totalUnpaid = stat.withImage + stat.noImage;
-                const hasPendingRequest = !!pendingPayoutByUser[p.user_id];
-                const showHold = ((totalUnpaid >= 10) || p.payout_hold) && !hasPendingRequest;
+                const heldStat = heldOfferStats[p.user_id];
+                const heldAmount = heldStat ? heldStat.withImage * 30 + heldStat.noImage * 20 : 0;
                 return (
                   <>
                     <div className="flex gap-2">
@@ -1358,19 +1388,14 @@ export default function SuperAdmin() {
                         <RotateCcw size={14} /> Выплата
                       </Button>
                     </div>
-                    {showHold && (
+                    {heldAmount > 0 && (
                       <Button
                         size="sm"
-                        variant="default"
-                        className={`w-full h-9 rounded-xl gap-2 font-black uppercase text-xs ${p.payout_hold ? 'bg-accent text-accent-foreground hover:bg-accent/90' : 'bg-warning text-warning-foreground hover:bg-warning/90'}`}
+                        className="w-full h-9 rounded-xl gap-2 font-black uppercase text-xs bg-accent text-accent-foreground hover:bg-accent/90"
                         disabled={adjustingId === p.user_id}
-                        onClick={() => toggleHold(p)}
+                        onClick={() => payHeldUser(p, heldAmount)}
                       >
-                        {p.payout_hold ? (
-                          <><CheckCircle size={14} /> Выплачено ({Number(p.payout_hold_amount) || 0}₽)</>
-                        ) : (
-                          <><Pause size={14} /> Холд ({stat.withImage * 30 + stat.noImage * 20}₽)</>
-                        )}
+                        <CheckCircle size={14} /> Выплачено по холду ({heldAmount}₽)
                       </Button>
                     )}
                   </>
