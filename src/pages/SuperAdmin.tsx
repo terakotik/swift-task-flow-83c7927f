@@ -614,8 +614,66 @@ export default function SuperAdmin() {
         payoutTotal,
       };
     })
-    .filter(item => item.totalTasks >= 10)
+    .filter(item => item.totalTasks >= 10 && !item.profile.payout_hold)
     .sort((a, b) => b.payoutTotal - a.payoutTotal);
+
+  const heldUsers = profiles
+    .filter(p => p.payout_hold)
+    .map(p => ({
+      profile: p,
+      withImage: p.payout_hold_with_image || 0,
+      noImage: p.payout_hold_no_image || 0,
+      payoutTotal: Number(p.payout_hold_amount) || 0,
+    }))
+    .sort((a, b) => b.payoutTotal - a.payoutTotal);
+
+  const toggleHold = async (profile: UserProfile) => {
+    if (!isAdmin && !currentUserIsAdmin) {
+      toast({ title: 'Нет прав', variant: 'destructive' });
+      return;
+    }
+    setAdjustingId(profile.user_id);
+    if (profile.payout_hold) {
+      // снять холд
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          payout_hold: false,
+          payout_hold_at: null,
+          payout_hold_amount: 0,
+          payout_hold_with_image: 0,
+          payout_hold_no_image: 0,
+        })
+        .eq('user_id', profile.user_id);
+      setAdjustingId(null);
+      if (error) {
+        toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+        return;
+      }
+      await loadData();
+      toast({ title: 'Холд снят' });
+    } else {
+      const stat = unpaidOfferStats[profile.user_id] || { withImage: 0, noImage: 0 };
+      const total = stat.withImage * 30 + stat.noImage * 20;
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          payout_hold: true,
+          payout_hold_at: new Date().toISOString(),
+          payout_hold_amount: total,
+          payout_hold_with_image: stat.withImage,
+          payout_hold_no_image: stat.noImage,
+        })
+        .eq('user_id', profile.user_id);
+      setAdjustingId(null);
+      if (error) {
+        toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+        return;
+      }
+      await loadData();
+      toast({ title: 'Холд включён', description: `${total}₽ зафиксировано` });
+    }
+  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
