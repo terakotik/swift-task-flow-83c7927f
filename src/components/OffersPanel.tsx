@@ -37,9 +37,9 @@ export function OffersPanel({ onClose }: Props) {
             Размещение заказов в заведениях. Базовый оффер — подключён всем по умолчанию.
           </p>
           <div className="flex items-center gap-3 mt-3 text-[11px] font-bold opacity-90">
-            <span>💰 от 20₽/задание</span>
+            <span>💰 20₽/задание</span>
             <span>•</span>
-            <span>📸 +20₽ с фото</span>
+            <span>📸 30₽/задание по картинке</span>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-4">
             <Button disabled className="bg-background/20 text-primary-foreground hover:bg-background/20 font-black h-11 rounded-2xl disabled:opacity-100">

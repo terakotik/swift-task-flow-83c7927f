@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, Archive, Undo2, Wrench, Film } from 'lucide-react';
+import { LogOut, Trash2, Users, Wallet, RefreshCw, Plus, Minus, RotateCcw, History, X, CheckCircle, Archive, Undo2, Wrench, Film, Pause, Play } from 'lucide-react';
 import { AdminPayoutRequests } from '@/components/AdminPayoutRequests';
 
 const SUPER_ADMIN_EMAIL = 'vt@admin.com';
@@ -24,6 +24,11 @@ interface UserProfile {
   email: string | null;
   balance: number;
   created_at: string;
+  payout_hold?: boolean;
+  payout_hold_at?: string | null;
+  payout_hold_amount?: number;
+  payout_hold_with_image?: number;
+  payout_hold_no_image?: number;
 }
 
 interface UserRole {
@@ -180,7 +185,7 @@ export default function SuperAdmin() {
     sinceDate.setHours(0, 0, 0, 0);
     sinceDate.setDate(sinceDate.getDate() - 6);
     const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }, { data: balanceHistoryData }, { data: completedWeek }] = await Promise.all([
-      supabase.from('profiles').select('user_id, display_name, email, balance, created_at').order('created_at', { ascending: false }),
+      supabase.from('profiles').select('user_id, display_name, email, balance, created_at, payout_hold, payout_hold_at, payout_hold_amount, payout_hold_with_image, payout_hold_no_image').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
       supabase.from('completed_tasks').select('user_id, task_id').eq('status', 'done'),
@@ -428,8 +433,19 @@ export default function SuperAdmin() {
       });
     }
 
+    // Сбрасываем холд, если был
+    if (profile.payout_hold) {
+      await supabase.from('profiles').update({
+        payout_hold: false,
+        payout_hold_at: null,
+        payout_hold_amount: 0,
+        payout_hold_with_image: 0,
+        payout_hold_no_image: 0,
+      }).eq('user_id', profile.user_id);
+    }
+
     setAdjustingId(null);
-    setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: 0 } : p));
+    setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: 0, payout_hold: false } : p));
     setDoneCounts(prev => ({ ...prev, [profile.user_id]: 0 }));
     await loadData();
     toast({
@@ -609,8 +625,66 @@ export default function SuperAdmin() {
         payoutTotal,
       };
     })
-    .filter(item => item.totalTasks >= 10)
+    .filter(item => item.totalTasks >= 10 && !item.profile.payout_hold)
     .sort((a, b) => b.payoutTotal - a.payoutTotal);
+
+  const heldUsers = profiles
+    .filter(p => p.payout_hold)
+    .map(p => ({
+      profile: p,
+      withImage: p.payout_hold_with_image || 0,
+      noImage: p.payout_hold_no_image || 0,
+      payoutTotal: Number(p.payout_hold_amount) || 0,
+    }))
+    .sort((a, b) => b.payoutTotal - a.payoutTotal);
+
+  const toggleHold = async (profile: UserProfile) => {
+    if (!isAdmin && !currentUserIsAdmin) {
+      toast({ title: 'Нет прав', variant: 'destructive' });
+      return;
+    }
+    setAdjustingId(profile.user_id);
+    if (profile.payout_hold) {
+      // снять холд
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          payout_hold: false,
+          payout_hold_at: null,
+          payout_hold_amount: 0,
+          payout_hold_with_image: 0,
+          payout_hold_no_image: 0,
+        })
+        .eq('user_id', profile.user_id);
+      setAdjustingId(null);
+      if (error) {
+        toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+        return;
+      }
+      await loadData();
+      toast({ title: 'Холд снят' });
+    } else {
+      const stat = unpaidOfferStats[profile.user_id] || { withImage: 0, noImage: 0 };
+      const total = stat.withImage * 30 + stat.noImage * 20;
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          payout_hold: true,
+          payout_hold_at: new Date().toISOString(),
+          payout_hold_amount: total,
+          payout_hold_with_image: stat.withImage,
+          payout_hold_no_image: stat.noImage,
+        })
+        .eq('user_id', profile.user_id);
+      setAdjustingId(null);
+      if (error) {
+        toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+        return;
+      }
+      await loadData();
+      toast({ title: 'Холд включён', description: `${total}₽ зафиксировано` });
+    }
+  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -824,6 +898,54 @@ export default function SuperAdmin() {
             </section>
           );
         })()}
+
+        {heldUsers.length > 0 && (
+          <section className="bg-warning/10 rounded-2xl border-2 border-warning/40 shadow-sm p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Pause size={18} className="text-warning" />
+              <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
+                На холде ({heldUsers.length})
+              </h2>
+            </div>
+            <p className="text-[10px] text-muted-foreground font-bold">
+              Эти юзеры ждут выплату. Сумма зафиксирована, новые задания после холда сюда не попадают.
+            </p>
+            <div className="space-y-2">
+              {heldUsers.map(({ profile, withImage, noImage, payoutTotal }) => (
+                <div key={profile.user_id} className="bg-card rounded-xl p-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-black text-foreground text-sm truncate">{profile.display_name || profile.email || '—'}</p>
+                    <p className="text-[10px] text-muted-foreground font-bold">
+                      📷{withImage} · 📝{noImage} · с {profile.payout_hold_at ? new Date(profile.payout_hold_at).toLocaleDateString('ru-RU') : '—'}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-lg font-black text-warning">{payoutTotal}₽</p>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <Button
+                      size="sm"
+                      className="h-8 rounded-xl px-2 text-[10px] font-black bg-accent text-accent-foreground hover:bg-accent/90"
+                      onClick={() => resetBalance(profile)}
+                      disabled={adjustingId === profile.user_id}
+                    >
+                      Выплачено
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-xl px-2 text-[10px] font-black gap-1"
+                      onClick={() => toggleHold(profile)}
+                      disabled={adjustingId === profile.user_id}
+                    >
+                      <Play size={11} /> Снять
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <AdminPayoutRequests />
 
@@ -1186,24 +1308,48 @@ export default function SuperAdmin() {
                 </Button>
               </div>
 
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
-                  onClick={() => openHistory(p)}
-                >
-                  <History size={14} /> История ({doneCounts[p.user_id] || 0})
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs bg-accent text-accent-foreground hover:bg-accent/90"
-                  disabled={adjustingId === p.user_id || (Number(p.balance) === 0 && (doneCounts[p.user_id] || 0) === 0)}
-                  onClick={() => resetBalance(p)}
-                >
-                  <RotateCcw size={14} /> Выплата
-                </Button>
-              </div>
+              {(() => {
+                const stat = unpaidOfferStats[p.user_id] || { withImage: 0, noImage: 0 };
+                const totalUnpaid = stat.withImage + stat.noImage;
+                const showHold = (totalUnpaid >= 10) || p.payout_hold;
+                return (
+                  <>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+                        onClick={() => openHistory(p)}
+                      >
+                        <History size={14} /> История ({doneCounts[p.user_id] || 0})
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs bg-accent text-accent-foreground hover:bg-accent/90"
+                        disabled={adjustingId === p.user_id || (Number(p.balance) === 0 && (doneCounts[p.user_id] || 0) === 0)}
+                        onClick={() => resetBalance(p)}
+                      >
+                        <RotateCcw size={14} /> Выплата
+                      </Button>
+                    </div>
+                    {showHold && (
+                      <Button
+                        size="sm"
+                        variant={p.payout_hold ? 'default' : 'outline'}
+                        className={`w-full h-9 rounded-xl gap-2 font-black uppercase text-xs ${p.payout_hold ? 'bg-warning text-warning-foreground hover:bg-warning/90' : 'border-warning/50 text-warning hover:bg-warning/10 hover:text-warning'}`}
+                        disabled={adjustingId === p.user_id}
+                        onClick={() => toggleHold(p)}
+                      >
+                        {p.payout_hold ? (
+                          <><Play size={14} /> Снять холд ({Number(p.payout_hold_amount) || 0}₽)</>
+                        ) : (
+                          <><Pause size={14} /> Холд ({stat.withImage * 30 + stat.noImage * 20}₽)</>
+                        )}
+                      </Button>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           );
         })}

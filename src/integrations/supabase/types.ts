@@ -233,6 +233,11 @@ export type Database = {
           email: string | null
           first_payout_at: string | null
           id: string
+          payout_hold: boolean
+          payout_hold_amount: number
+          payout_hold_at: string | null
+          payout_hold_no_image: number
+          payout_hold_with_image: number
           referral_code: string | null
           referred_by: string | null
           updated_at: string
@@ -245,6 +250,11 @@ export type Database = {
           email?: string | null
           first_payout_at?: string | null
           id?: string
+          payout_hold?: boolean
+          payout_hold_amount?: number
+          payout_hold_at?: string | null
+          payout_hold_no_image?: number
+          payout_hold_with_image?: number
           referral_code?: string | null
           referred_by?: string | null
           updated_at?: string
@@ -257,6 +267,11 @@ export type Database = {
           email?: string | null
           first_payout_at?: string | null
           id?: string
+          payout_hold?: boolean
+          payout_hold_amount?: number
+          payout_hold_at?: string | null
+          payout_hold_no_image?: number
+          payout_hold_with_image?: number
           referral_code?: string | null
           referred_by?: string | null
           updated_at?: string
