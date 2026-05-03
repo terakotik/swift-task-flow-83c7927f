@@ -115,6 +115,8 @@ export default function SuperAdmin() {
   const [veSource, setVeSource] = useState('');
   const [veRef, setVeRef] = useState('');
   const [veSubmitting, setVeSubmitting] = useState(false);
+  // Pending payout requests: user_id -> { id, amount }
+  const [pendingPayoutByUser, setPendingPayoutByUser] = useState<Record<string, { id: string; amount: number }>>({});
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const currentUserIsAdmin = !!user && roles.some(role => role.user_id === user.id && role.role === 'admin');
@@ -184,14 +186,21 @@ export default function SuperAdmin() {
     const sinceDate = new Date();
     sinceDate.setHours(0, 0, 0, 0);
     sinceDate.setDate(sinceDate.getDate() - 6);
-    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }, { data: balanceHistoryData }, { data: completedWeek }] = await Promise.all([
+    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }, { data: balanceHistoryData }, { data: completedWeek }, { data: pendingPayouts }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at, payout_hold, payout_hold_at, payout_hold_amount, payout_hold_with_image, payout_hold_no_image').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
       supabase.from('completed_tasks').select('user_id, task_id').eq('status', 'done'),
       supabase.from('balance_history').select('user_id, delta, reason'),
       supabase.from('completed_tasks').select('task_id, completed_at, status').in('status', ['done', 'paid']).gte('completed_at', sinceDate.toISOString()),
+      supabase.from('payout_requests').select('id, user_id, amount').eq('status', 'pending'),
     ]);
+
+    const pendingMap: Record<string, { id: string; amount: number }> = {};
+    (pendingPayouts ?? []).forEach((r: any) => {
+      pendingMap[r.user_id] = { id: r.id, amount: Number(r.amount) || 0 };
+    });
+    setPendingPayoutByUser(pendingMap);
 
     if (profilesError || rolesError || tasksError) {
       toast({ title: 'Ошибка загрузки', description: profilesError?.message || rolesError?.message || tasksError?.message, variant: 'destructive' });
@@ -625,17 +634,25 @@ export default function SuperAdmin() {
         payoutTotal,
       };
     })
-    .filter(item => item.totalTasks >= 10 && !item.profile.payout_hold)
+    .filter(item => item.totalTasks >= 10 && !item.profile.payout_hold && !pendingPayoutByUser[item.profile.user_id])
     .sort((a, b) => b.payoutTotal - a.payoutTotal);
 
   const heldUsers = profiles
-    .filter(p => p.payout_hold)
-    .map(p => ({
-      profile: p,
-      withImage: p.payout_hold_with_image || 0,
-      noImage: p.payout_hold_no_image || 0,
-      payoutTotal: Number(p.payout_hold_amount) || 0,
-    }))
+    .filter(p => p.payout_hold || pendingPayoutByUser[p.user_id])
+    .map(p => {
+      const stat = unpaidOfferStats[p.user_id] || { withImage: 0, noImage: 0 };
+      const fromRequest = pendingPayoutByUser[p.user_id];
+      const isRequest = !p.payout_hold && !!fromRequest;
+      return {
+        profile: p,
+        withImage: p.payout_hold ? (p.payout_hold_with_image || 0) : stat.withImage,
+        noImage: p.payout_hold ? (p.payout_hold_no_image || 0) : stat.noImage,
+        payoutTotal: p.payout_hold
+          ? (Number(p.payout_hold_amount) || 0)
+          : (fromRequest ? fromRequest.amount : stat.withImage * 30 + stat.noImage * 20),
+        isRequest,
+      };
+    })
     .sort((a, b) => b.payoutTotal - a.payoutTotal);
 
   const toggleHold = async (profile: UserProfile) => {
@@ -645,7 +662,17 @@ export default function SuperAdmin() {
     }
     setAdjustingId(profile.user_id);
     if (profile.payout_hold) {
-      // снять холд
+      // снять холд = деньги выплачены: помечаем done-задания как paid + чистим холд
+      const { error: tasksError } = await supabase
+        .from('completed_tasks')
+        .update({ status: 'paid' })
+        .eq('user_id', profile.user_id)
+        .eq('status', 'done');
+      if (tasksError) {
+        setAdjustingId(null);
+        toast({ title: 'Ошибка', description: tasksError.message, variant: 'destructive' });
+        return;
+      }
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -662,7 +689,7 @@ export default function SuperAdmin() {
         return;
       }
       await loadData();
-      toast({ title: 'Холд снят' });
+      toast({ title: '✅ Выплачено', description: 'Холд снят, задания закрыты как оплаченные' });
     } else {
       const stat = unpaidOfferStats[profile.user_id] || { withImage: 0, noImage: 0 };
       const total = stat.withImage * 30 + stat.noImage * 20;
@@ -911,35 +938,33 @@ export default function SuperAdmin() {
               Эти юзеры ждут выплату. Сумма зафиксирована, новые задания после холда сюда не попадают.
             </p>
             <div className="space-y-2">
-              {heldUsers.map(({ profile, withImage, noImage, payoutTotal }) => (
+              {heldUsers.map(({ profile, withImage, noImage, payoutTotal, isRequest }) => (
                 <div key={profile.user_id} className="bg-card rounded-xl p-3 flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="font-black text-foreground text-sm truncate">{profile.display_name || profile.email || '—'}</p>
                     <p className="text-[10px] text-muted-foreground font-bold">
-                      📷{withImage} · 📝{noImage} · с {profile.payout_hold_at ? new Date(profile.payout_hold_at).toLocaleDateString('ru-RU') : '—'}
+                      📷{withImage} · 📝{noImage} · {isRequest ? 'заявка на выплату' : `с ${profile.payout_hold_at ? new Date(profile.payout_hold_at).toLocaleDateString('ru-RU') : '—'}`}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-lg font-black text-warning">{payoutTotal}₽</p>
                   </div>
                   <div className="flex flex-col gap-1 shrink-0">
-                    <Button
-                      size="sm"
-                      className="h-8 rounded-xl px-2 text-[10px] font-black bg-accent text-accent-foreground hover:bg-accent/90"
-                      onClick={() => resetBalance(profile)}
-                      disabled={adjustingId === profile.user_id}
-                    >
-                      Выплачено
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 rounded-xl px-2 text-[10px] font-black gap-1"
-                      onClick={() => toggleHold(profile)}
-                      disabled={adjustingId === profile.user_id}
-                    >
-                      <Play size={11} /> Снять
-                    </Button>
+                    {!isRequest && (
+                      <Button
+                        size="sm"
+                        className="h-8 rounded-xl px-2 text-[10px] font-black gap-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                        onClick={() => toggleHold(profile)}
+                        disabled={adjustingId === profile.user_id}
+                      >
+                        <CheckCircle size={11} /> Выплачено
+                      </Button>
+                    )}
+                    {isRequest && (
+                      <span className="text-[9px] font-black uppercase text-warning bg-warning/15 rounded-full px-2 py-1 text-center">
+                        ждёт выплаты
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1311,7 +1336,8 @@ export default function SuperAdmin() {
               {(() => {
                 const stat = unpaidOfferStats[p.user_id] || { withImage: 0, noImage: 0 };
                 const totalUnpaid = stat.withImage + stat.noImage;
-                const showHold = (totalUnpaid >= 10) || p.payout_hold;
+                const hasPendingRequest = !!pendingPayoutByUser[p.user_id];
+                const showHold = ((totalUnpaid >= 10) || p.payout_hold) && !hasPendingRequest;
                 return (
                   <>
                     <div className="flex gap-2">
@@ -1335,13 +1361,13 @@ export default function SuperAdmin() {
                     {showHold && (
                       <Button
                         size="sm"
-                        variant={p.payout_hold ? 'default' : 'outline'}
-                        className={`w-full h-9 rounded-xl gap-2 font-black uppercase text-xs ${p.payout_hold ? 'bg-warning text-warning-foreground hover:bg-warning/90' : 'border-warning/50 text-warning hover:bg-warning/10 hover:text-warning'}`}
+                        variant="default"
+                        className={`w-full h-9 rounded-xl gap-2 font-black uppercase text-xs ${p.payout_hold ? 'bg-accent text-accent-foreground hover:bg-accent/90' : 'bg-warning text-warning-foreground hover:bg-warning/90'}`}
                         disabled={adjustingId === p.user_id}
                         onClick={() => toggleHold(p)}
                       >
                         {p.payout_hold ? (
-                          <><Play size={14} /> Снять холд ({Number(p.payout_hold_amount) || 0}₽)</>
+                          <><CheckCircle size={14} /> Выплачено ({Number(p.payout_hold_amount) || 0}₽)</>
                         ) : (
                           <><Pause size={14} /> Холд ({stat.withImage * 30 + stat.noImage * 20}₽)</>
                         )}
