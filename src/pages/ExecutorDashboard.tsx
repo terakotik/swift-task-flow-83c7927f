@@ -672,8 +672,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               {demoMode ? 'Демо-режим' : 'Мои задания'}
             </h1>
             <div className="flex gap-2">
-              <button onClick={() => setShowInstruction(true)} className="p-2 bg-primary/10 text-primary rounded-full">
-                <Info size={24} />
+              <button onClick={() => setShowInstruction(true)} className="px-2.5 h-8 bg-primary/10 text-primary rounded-full flex items-center gap-1 text-[11px] font-black uppercase">
+                <Info size={14} /> Инструкция
               </button>
               {!demoMode && (
                 <button onClick={() => setShowOffers(true)} className="p-2 bg-accent/10 text-accent rounded-full" title="Офферы">
@@ -1006,14 +1006,25 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
           <div className="absolute inset-0 bg-foreground/60 backdrop-blur-sm" onClick={() => setShowInstruction(false)} />
           <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[40px] p-8 pb-12 animate-in slide-in-from-bottom">
             <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-8" />
-            <h2 className="text-2xl font-black text-foreground mb-6">Инструкция</h2>
-            <div className="space-y-4 text-sm text-muted-foreground font-medium">
-              <p>1. Вводим адрес А в Яндекс Еде.</p>
-              <p>2. Ищем ресторан в поиске.</p>
-              <p>3. Выбираем <b className="text-foreground">соус васаби</b>.</p>
-              <p>4. Меняем адрес на <b className="text-foreground">адрес Б</b>.</p>
-              <p>5. Оплата — <b className="text-foreground">Наличные</b>.</p>
-              <p>6. Ждем статус "Доставлен", ставим <b className="text-foreground">5 звезд</b>.</p>
+            <h2 className="text-2xl font-black text-foreground mb-3">Инструкция</h2>
+            <p className="text-xs font-bold text-warning mb-5">
+              Только если у вас есть старый аккаунт Яндекс Go 👇 (на котором вы ранее делали заказ такси или еды)
+            </p>
+            <div className="space-y-3 text-sm text-muted-foreground font-medium max-h-[55vh] overflow-y-auto pr-1">
+              <p>1. Вводим адрес в приложении <b className="text-foreground">Яндекс Еда</b>.</p>
+              <p className="pl-3">Адрес: <b className="text-foreground">А</b></p>
+              <p>2. В поиске ищем ресторан.</p>
+              <p>3. Заходим в него и выбираем <b className="text-foreground">соус васаби</b>.</p>
+              <p>4. Меняем адрес на:</p>
+              <p className="pl-3">Адрес <b className="text-foreground">Б</b></p>
+              <p>5. Переходим в корзину и нажимаем <b className="text-foreground">Оформить заказ</b>.</p>
+              <p>6. Способ оплаты — <b className="text-foreground">Наличные</b>.</p>
+              <p>7. Оформить заказ.</p>
+              <p className="pt-2">Дальше ждём, когда заказ перейдёт в статус <b className="text-foreground">"Доставлен"</b> — обновляем страницу, ставим <b className="text-foreground">5 звёзд</b>.</p>
+              <div className="bg-destructive/10 rounded-2xl p-3 space-y-1 mt-3">
+                <p className="text-destructive font-bold">❌ Не ставить самовывоз</p>
+                <p className="text-destructive font-bold">❌ Не заказывайте много товаров</p>
+              </div>
             </div>
             <Button onClick={() => setShowInstruction(false)} className="w-full mt-8 font-black uppercase bg-foreground text-background hover:bg-foreground/90">
               Понятно
