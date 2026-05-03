@@ -1308,24 +1308,48 @@ export default function SuperAdmin() {
                 </Button>
               </div>
 
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
-                  onClick={() => openHistory(p)}
-                >
-                  <History size={14} /> История ({doneCounts[p.user_id] || 0})
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs bg-accent text-accent-foreground hover:bg-accent/90"
-                  disabled={adjustingId === p.user_id || (Number(p.balance) === 0 && (doneCounts[p.user_id] || 0) === 0)}
-                  onClick={() => resetBalance(p)}
-                >
-                  <RotateCcw size={14} /> Выплата
-                </Button>
-              </div>
+              {(() => {
+                const stat = unpaidOfferStats[p.user_id] || { withImage: 0, noImage: 0 };
+                const totalUnpaid = stat.withImage + stat.noImage;
+                const showHold = (totalUnpaid >= 10) || p.payout_hold;
+                return (
+                  <>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+                        onClick={() => openHistory(p)}
+                      >
+                        <History size={14} /> История ({doneCounts[p.user_id] || 0})
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 h-9 rounded-xl gap-2 font-black uppercase text-xs bg-accent text-accent-foreground hover:bg-accent/90"
+                        disabled={adjustingId === p.user_id || (Number(p.balance) === 0 && (doneCounts[p.user_id] || 0) === 0)}
+                        onClick={() => resetBalance(p)}
+                      >
+                        <RotateCcw size={14} /> Выплата
+                      </Button>
+                    </div>
+                    {showHold && (
+                      <Button
+                        size="sm"
+                        variant={p.payout_hold ? 'default' : 'outline'}
+                        className={`w-full h-9 rounded-xl gap-2 font-black uppercase text-xs ${p.payout_hold ? 'bg-warning text-warning-foreground hover:bg-warning/90' : 'border-warning/50 text-warning hover:bg-warning/10 hover:text-warning'}`}
+                        disabled={adjustingId === p.user_id}
+                        onClick={() => toggleHold(p)}
+                      >
+                        {p.payout_hold ? (
+                          <><Play size={14} /> Снять холд ({Number(p.payout_hold_amount) || 0}₽)</>
+                        ) : (
+                          <><Pause size={14} /> Холд ({stat.withImage * 30 + stat.noImage * 20}₽)</>
+                        )}
+                      </Button>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           );
         })}
