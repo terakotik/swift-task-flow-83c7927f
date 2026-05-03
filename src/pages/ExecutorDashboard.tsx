@@ -358,9 +358,13 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
       return;
     }
     if (!user) return;
+    // Задания на монтаж видео не отправляем на проверку админу
+    if (currentTask.task_type === 'video_edit') {
+      setReelsSubmitted(true);
+      return;
+    }
     setSubmitting(true);
-    const orderPrefix = currentTask.task_type === 'video_edit' ? 'videoedit-' : 'reels-';
-    const orderNumber = orderPrefix + Date.now().toString(36);
+    const orderNumber = 'reels-' + Date.now().toString(36);
     const { error } = await supabase.from('completed_tasks').insert({
       task_id: currentTask.id,
       user_id: user.id,
