@@ -672,8 +672,8 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
               {demoMode ? 'Демо-режим' : 'Мои задания'}
             </h1>
             <div className="flex gap-2">
-              <button onClick={() => setShowInstruction(true)} className="p-2 bg-primary/10 text-primary rounded-full">
-                <Info size={24} />
+              <button onClick={() => setShowInstruction(true)} className="px-2.5 h-8 bg-primary/10 text-primary rounded-full flex items-center gap-1 text-[11px] font-black uppercase">
+                <Info size={14} /> Инструкция
               </button>
               {!demoMode && (
                 <button onClick={() => setShowOffers(true)} className="p-2 bg-accent/10 text-accent rounded-full" title="Офферы">
