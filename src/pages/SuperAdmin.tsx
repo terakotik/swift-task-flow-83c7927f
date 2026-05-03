@@ -928,35 +928,33 @@ export default function SuperAdmin() {
               Эти юзеры ждут выплату. Сумма зафиксирована, новые задания после холда сюда не попадают.
             </p>
             <div className="space-y-2">
-              {heldUsers.map(({ profile, withImage, noImage, payoutTotal }) => (
+              {heldUsers.map(({ profile, withImage, noImage, payoutTotal, isRequest }) => (
                 <div key={profile.user_id} className="bg-card rounded-xl p-3 flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="font-black text-foreground text-sm truncate">{profile.display_name || profile.email || '—'}</p>
                     <p className="text-[10px] text-muted-foreground font-bold">
-                      📷{withImage} · 📝{noImage} · с {profile.payout_hold_at ? new Date(profile.payout_hold_at).toLocaleDateString('ru-RU') : '—'}
+                      📷{withImage} · 📝{noImage} · {isRequest ? 'заявка на выплату' : `с ${profile.payout_hold_at ? new Date(profile.payout_hold_at).toLocaleDateString('ru-RU') : '—'}`}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-lg font-black text-warning">{payoutTotal}₽</p>
                   </div>
                   <div className="flex flex-col gap-1 shrink-0">
-                    <Button
-                      size="sm"
-                      className="h-8 rounded-xl px-2 text-[10px] font-black bg-accent text-accent-foreground hover:bg-accent/90"
-                      onClick={() => resetBalance(profile)}
-                      disabled={adjustingId === profile.user_id}
-                    >
-                      Выплачено
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 rounded-xl px-2 text-[10px] font-black gap-1"
-                      onClick={() => toggleHold(profile)}
-                      disabled={adjustingId === profile.user_id}
-                    >
-                      <Play size={11} /> Снять
-                    </Button>
+                    {!isRequest && (
+                      <Button
+                        size="sm"
+                        className="h-8 rounded-xl px-2 text-[10px] font-black gap-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                        onClick={() => toggleHold(profile)}
+                        disabled={adjustingId === profile.user_id}
+                      >
+                        <CheckCircle size={11} /> Выплачено
+                      </Button>
+                    )}
+                    {isRequest && (
+                      <span className="text-[9px] font-black uppercase text-warning bg-warning/15 rounded-full px-2 py-1 text-center">
+                        ждёт выплаты
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
