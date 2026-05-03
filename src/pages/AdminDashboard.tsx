@@ -360,7 +360,7 @@ export default function AdminDashboard() {
     if (res.skipped) {
       toast({ title: 'Уже было подтверждено', description: 'Повторное начисление пропущено' });
     } else {
-      toast({ title: 'Готово!', description: `+${res.credited}₽ на баланс` });
+      toast({ title: 'Готово!', description: 'Заказ подтверждён' });
     }
   };
 
