@@ -186,14 +186,21 @@ export default function SuperAdmin() {
     const sinceDate = new Date();
     sinceDate.setHours(0, 0, 0, 0);
     sinceDate.setDate(sinceDate.getDate() - 6);
-    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }, { data: balanceHistoryData }, { data: completedWeek }] = await Promise.all([
+    const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, { data: tasksData, error: tasksError }, { data: completedDone }, { data: balanceHistoryData }, { data: completedWeek }, { data: pendingPayouts }] = await Promise.all([
       supabase.from('profiles').select('user_id, display_name, email, balance, created_at, payout_hold, payout_hold_at, payout_hold_amount, payout_hold_with_image, payout_hold_no_image').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('user_id, role'),
       supabase.from('tasks').select('id, name, addr1, addr2, created_at, status, image_url, task_type').order('created_at', { ascending: false }),
       supabase.from('completed_tasks').select('user_id, task_id').eq('status', 'done'),
       supabase.from('balance_history').select('user_id, delta, reason'),
       supabase.from('completed_tasks').select('task_id, completed_at, status').in('status', ['done', 'paid']).gte('completed_at', sinceDate.toISOString()),
+      supabase.from('payout_requests').select('id, user_id, amount').eq('status', 'pending'),
     ]);
+
+    const pendingMap: Record<string, { id: string; amount: number }> = {};
+    (pendingPayouts ?? []).forEach((r: any) => {
+      pendingMap[r.user_id] = { id: r.id, amount: Number(r.amount) || 0 };
+    });
+    setPendingPayoutByUser(pendingMap);
 
     if (profilesError || rolesError || tasksError) {
       toast({ title: 'Ошибка загрузки', description: profilesError?.message || rolesError?.message || tasksError?.message, variant: 'destructive' });
