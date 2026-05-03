@@ -29,6 +29,7 @@ interface TaskInfo {
   status: string;
   expires_at: string | null;
   created_at: string;
+  task_type?: string | null;
   restaurant_tag?: string | null;
 }
 
@@ -260,7 +261,8 @@ export default function AdminDashboard() {
   const loadAllTasks = async () => {
     const { data } = await supabase
       .from('tasks')
-      .select('id, task_id, name, status, expires_at, created_at, restaurant_tag')
+      .select('id, task_id, name, status, expires_at, created_at, restaurant_tag, task_type')
+      .neq('task_type', 'video_edit')
       .order('created_at', { ascending: false });
     setAllTasks(data ?? []);
   };
@@ -643,10 +645,11 @@ export default function AdminDashboard() {
     return Array.from(tags).sort();
   })();
 
-  const archivedTasks = allTasks
+  const visibleTasks = allTasks.filter(t => t.task_type !== 'video_edit');
+  const archivedTasks = visibleTasks
     .filter(t => t.status === 'archived')
     .filter(t => archiveFilter === 'all' ? true : archiveFilter === '__none__' ? !t.restaurant_tag : t.restaurant_tag === archiveFilter);
-  const activeTasks = allTasks.filter(t => t.status === 'available');
+  const activeTasks = visibleTasks.filter(t => t.status === 'available');
   const pendingIssues = issueReports.filter(issue => issue.status === 'pending');
 
   // Aggregate done tasks per user (these reset to 'paid' after super-admin payout)
