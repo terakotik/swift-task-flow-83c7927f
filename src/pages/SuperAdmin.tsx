@@ -433,8 +433,19 @@ export default function SuperAdmin() {
       });
     }
 
+    // Сбрасываем холд, если был
+    if (profile.payout_hold) {
+      await supabase.from('profiles').update({
+        payout_hold: false,
+        payout_hold_at: null,
+        payout_hold_amount: 0,
+        payout_hold_with_image: 0,
+        payout_hold_no_image: 0,
+      }).eq('user_id', profile.user_id);
+    }
+
     setAdjustingId(null);
-    setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: 0 } : p));
+    setProfiles(prev => prev.map(p => p.user_id === profile.user_id ? { ...p, balance: 0, payout_hold: false } : p));
     setDoneCounts(prev => ({ ...prev, [profile.user_id]: 0 }));
     await loadData();
     toast({
