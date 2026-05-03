@@ -52,6 +52,7 @@ export type Database = {
           accepted_at: string | null
           completed_at: string | null
           created_at: string
+          held_at: string | null
           id: string
           order_number: string
           reject_reason: string | null
@@ -63,6 +64,7 @@ export type Database = {
           accepted_at?: string | null
           completed_at?: string | null
           created_at?: string
+          held_at?: string | null
           id?: string
           order_number: string
           reject_reason?: string | null
@@ -74,6 +76,7 @@ export type Database = {
           accepted_at?: string | null
           completed_at?: string | null
           created_at?: string
+          held_at?: string | null
           id?: string
           order_number?: string
           reject_reason?: string | null
@@ -399,6 +402,7 @@ export type Database = {
         }
         Returns: Json
       }
+      freeze_unpaid_batch: { Args: never; Returns: Json }
       generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -408,6 +412,7 @@ export type Database = {
         Returns: boolean
       }
       lookup_referrer: { Args: { _code: string }; Returns: Json }
+      mark_user_batch_paid: { Args: { _user_id: string }; Returns: Json }
       process_referral_payout: { Args: { _user_id: string }; Returns: Json }
       reject_payout_request: {
         Args: { _reason: string; _request_id: string }
