@@ -634,17 +634,25 @@ export default function SuperAdmin() {
         payoutTotal,
       };
     })
-    .filter(item => item.totalTasks >= 10 && !item.profile.payout_hold)
+    .filter(item => item.totalTasks >= 10 && !item.profile.payout_hold && !pendingPayoutByUser[item.profile.user_id])
     .sort((a, b) => b.payoutTotal - a.payoutTotal);
 
   const heldUsers = profiles
-    .filter(p => p.payout_hold)
-    .map(p => ({
-      profile: p,
-      withImage: p.payout_hold_with_image || 0,
-      noImage: p.payout_hold_no_image || 0,
-      payoutTotal: Number(p.payout_hold_amount) || 0,
-    }))
+    .filter(p => p.payout_hold || pendingPayoutByUser[p.user_id])
+    .map(p => {
+      const stat = unpaidOfferStats[p.user_id] || { withImage: 0, noImage: 0 };
+      const fromRequest = pendingPayoutByUser[p.user_id];
+      const isRequest = !p.payout_hold && !!fromRequest;
+      return {
+        profile: p,
+        withImage: p.payout_hold ? (p.payout_hold_with_image || 0) : stat.withImage,
+        noImage: p.payout_hold ? (p.payout_hold_no_image || 0) : stat.noImage,
+        payoutTotal: p.payout_hold
+          ? (Number(p.payout_hold_amount) || 0)
+          : (fromRequest ? fromRequest.amount : stat.withImage * 30 + stat.noImage * 20),
+        isRequest,
+      };
+    })
     .sort((a, b) => b.payoutTotal - a.payoutTotal);
 
   const toggleHold = async (profile: UserProfile) => {
