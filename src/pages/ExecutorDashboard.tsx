@@ -169,6 +169,28 @@ export default function ExecutorDashboard({ demoMode = false, onExitDemo, demoFo
     loadCompletedTasks();
   }, [user, demoMode]);
 
+  // Realtime: live-update tasks list when admin adds/changes/removes tasks
+  useEffect(() => {
+    if (demoMode || !user) return;
+    const ch = supabase
+      .channel('tasks-live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        () => { loadTasks(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user, demoMode]);
+
+  // Refresh tasks when tab becomes visible again
+  useEffect(() => {
+    if (demoMode || !user) return;
+    const onVis = () => { if (document.visibilityState === 'visible') loadTasks(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [user, demoMode]);
+
   // Realtime: notify user when admin updates their balance
   useEffect(() => {
     if (demoMode || !user) return;
